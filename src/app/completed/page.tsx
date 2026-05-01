@@ -44,7 +44,7 @@ const CompletedRowSkeleton = () => (
 export default function CompletedPage() {
   const [completedOrders, setCompletedOrders] = useState<CompletedOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [errorBanner, setErrorBanner] = useState<string | null>(null);
+  const [, setErrorBanner] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchCompletedOrders = async () => {
@@ -138,12 +138,6 @@ export default function CompletedPage() {
             Total: {isLoading ? "..." : completedOrders.length}
           </p>
         </section>
-        {errorBanner ? (
-          <section className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {errorBanner}
-          </section>
-        ) : null}
-
         <section className="rounded-xl border border-zinc-200 bg-white px-4 py-3 shadow-sm md:px-6 md:py-4">
           <div className="hidden grid-cols-[1.1fr_1.4fr_2.3fr_1fr_1fr_0.7fr] items-center gap-4 border-b border-dotted border-zinc-300 pb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500 md:grid">
             {isLoading ? (
