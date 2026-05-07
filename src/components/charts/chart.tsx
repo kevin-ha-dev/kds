@@ -114,7 +114,35 @@ ${colorConfig
   );
 };
 
-const ChartTooltip = RechartsPrimitive.Tooltip;
+const defaultTooltipContentStyle: React.CSSProperties = {
+  backgroundColor: "#ffffff",
+  border: "1px solid #e4e4e7",
+  borderRadius: 8,
+  boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.08)",
+  color: "#18181b",
+};
+
+function ChartTooltip(props: React.ComponentProps<typeof RechartsPrimitive.Tooltip>) {
+  const {
+    animationDuration = 0,
+    isAnimationActive = false,
+    offset = 0,
+    contentStyle,
+    wrapperStyle,
+    ...rest
+  } = props;
+
+  return (
+    <RechartsPrimitive.Tooltip
+      {...rest}
+      animationDuration={animationDuration}
+      isAnimationActive={isAnimationActive}
+      offset={offset}
+      contentStyle={{ ...defaultTooltipContentStyle, ...contentStyle }}
+      wrapperStyle={{ outline: "none", ...wrapperStyle }}
+    />
+  );
+}
 
 function ChartTooltipContent({
   active,
@@ -166,14 +194,16 @@ function ChartTooltipContent({
         : itemConfig?.label;
 
     if (labelFormatter) {
-      return <div className={cn("font-medium", labelClassName)}>{labelFormatter(value, payload)}</div>;
+      return (
+        <div className={cn("font-medium text-zinc-800", labelClassName)}>{labelFormatter(value, payload)}</div>
+      );
     }
 
     if (!value) {
       return null;
     }
 
-    return <div className={cn("font-medium", labelClassName)}>{value}</div>;
+    return <div className={cn("font-medium text-zinc-800", labelClassName)}>{value}</div>;
   }, [label, labelFormatter, payload, hideLabel, labelClassName, config, labelKey]);
 
   if (!active || !payload?.length) {
@@ -185,7 +215,7 @@ function ChartTooltipContent({
   return (
     <div
       className={cn(
-        "border-border/50 bg-background grid min-w-32 items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs shadow-xl",
+        "grid min-w-32 items-start gap-1.5 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs text-zinc-900 shadow-lg scheme-light",
         className,
       )}
     >
@@ -202,7 +232,7 @@ function ChartTooltipContent({
               <div
                 key={item.dataKey ?? `${key}-${index}`}
                 className={cn(
-                  "[&>svg]:text-muted-foreground flex w-full flex-wrap items-stretch gap-2 [&>svg]:h-2.5 [&>svg]:w-2.5",
+                  "[&>svg]:text-zinc-500 flex w-full flex-wrap items-stretch gap-2 [&>svg]:h-2.5 [&>svg]:w-2.5",
                   indicator === "dot" && "items-center",
                 )}
               >
@@ -242,10 +272,10 @@ function ChartTooltipContent({
                     >
                       <div className="grid gap-1.5">
                         {nestLabel ? tooltipLabel : null}
-                        <span className="text-muted-foreground">{itemConfig?.label || item.name}</span>
+                        <span className="text-zinc-600">{itemConfig?.label || item.name}</span>
                       </div>
                       {item.value && (
-                        <span className="text-foreground font-mono font-medium tabular-nums">
+                        <span className="font-mono font-medium tabular-nums text-zinc-950">
                           {item.value.toLocaleString()}
                         </span>
                       )}
@@ -283,7 +313,7 @@ function ChartLegendContent({
   return (
     <div
       className={cn(
-        "flex items-center justify-center gap-4",
+        "flex items-center justify-center gap-4 text-sm text-zinc-700",
         verticalAlign === "top" ? "pb-3" : "pt-3",
         className,
       )}
@@ -298,7 +328,7 @@ function ChartLegendContent({
             <div
               key={item.value}
               className={cn(
-                "[&>svg]:text-muted-foreground flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3",
+                "[&>svg]:text-zinc-500 flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3",
               )}
             >
               {itemConfig?.icon && !hideIcon ? (

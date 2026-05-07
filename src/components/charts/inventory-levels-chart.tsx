@@ -8,7 +8,8 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "./chart";
-import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { CHART_BRAND_PRIMARY } from "./chart-brand";
 
 type Timeframe = "Today" | "Week" | "Month" | "Year";
 
@@ -52,10 +53,17 @@ const inventoryChartDataByTimeframe: Record<
 
 const inventoryChartConfig = {
   inStock: {
-    label: "In Stock",
-    color: "#18181b",
+    label: "In stock (%)",
+    color: CHART_BRAND_PRIMARY,
   },
 } satisfies ChartConfig;
+
+const percentAxisTicks = [0, 25, 50, 75, 100] as const;
+
+const formatPercentTick = (value: number) => `${value}%`;
+
+/** Matches repo pattern: gradient from ChartStyle `--color-*`, not Tailwind on chart.tsx */
+const IN_STOCK_FILL_GRADIENT_ID = "fill-inStock";
 
 export function InventoryLevelsChart({ selectedTimeframe }: InventoryLevelsChartProps) {
   const chartData = inventoryChartDataByTimeframe[selectedTimeframe];
@@ -66,12 +74,38 @@ export function InventoryLevelsChart({ selectedTimeframe }: InventoryLevelsChart
         Ingredient Levels
       </h2>
       <ChartContainer config={inventoryChartConfig} className="h-56 w-full">
-        <BarChart accessibilityLayer data={chartData} margin={{ top: 6, right: 8, left: 8, bottom: 2 }}>
+        <BarChart accessibilityLayer data={chartData} margin={{ top: 6, right: 8, left: 0, bottom: 2 }}>
+          <defs>
+            <linearGradient id={IN_STOCK_FILL_GRADIENT_ID} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="var(--color-inStock)" stopOpacity={0.8} />
+              <stop offset="95%" stopColor="var(--color-inStock)" stopOpacity={0.1} />
+            </linearGradient>
+          </defs>
           <CartesianGrid vertical={false} />
           <XAxis dataKey="ingredient" tickLine={false} tickMargin={10} axisLine={false} />
-          <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+          <YAxis
+            domain={[0, 100]}
+            ticks={[...percentAxisTicks]}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={formatPercentTick}
+            width={44}
+            tick={{ fontSize: 11, fill: "#71717a" }}
+          />
+          <ChartTooltip
+            cursor={false}
+            shared={false}
+            formatter={(value) => `${Number(value)}%`}
+            content={<ChartTooltipContent />}
+          />
           <ChartLegend content={<ChartLegendContent />} />
-          <Bar dataKey="inStock" fill="var(--color-inStock)" radius={6} />
+          <Bar
+            dataKey="inStock"
+            fill={`url(#${IN_STOCK_FILL_GRADIENT_ID})`}
+            stroke="var(--color-inStock)"
+            strokeWidth={1}
+            radius={6}
+          />
         </BarChart>
       </ChartContainer>
     </section>

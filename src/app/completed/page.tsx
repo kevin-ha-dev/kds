@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Navbar, Skeleton } from "@/components";
+import { pageTitleSectionWithDottedRuleClassName } from "@/lib/page-section-classes";
 import { parseResponseJson } from "@/lib/parse-response-json";
 import { getBrowserSupabaseClient } from "@/lib/supabase/client";
 import type { CompletedOrder, CompletedOrdersResponse } from "@/types/order";
@@ -151,7 +152,7 @@ export default function CompletedPage() {
     <main className="h-screen overflow-hidden bg-white px-6 py-8 text-zinc-900 lg:px-10">
       <div className="mx-auto flex w-full max-w-384 flex-col gap-8">
         <Navbar />
-        <section className="grid grid-cols-1 gap-3 border-b border-dotted border-zinc-300 pb-4 md:grid-cols-[1fr_auto] md:items-end">
+        <section className={pageTitleSectionWithDottedRuleClassName}>
           <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Completed</h1>
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
             Total: {isLoading ? "..." : completedOrders.length}

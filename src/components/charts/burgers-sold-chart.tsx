@@ -8,7 +8,8 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "./chart";
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { CHART_BRAND_PRIMARY } from "./chart-brand";
 
 type Timeframe = "Today" | "Week" | "Month" | "Year";
 
@@ -53,9 +54,11 @@ const burgersSoldByTimeframe: Record<Timeframe, Array<{ period: string; sold: nu
 const burgersSoldChartConfig = {
   sold: {
     label: "Burgers Sold",
-    color: "#f97316",
+    color: CHART_BRAND_PRIMARY,
   },
 } satisfies ChartConfig;
+
+const SOLD_FILL_GRADIENT_ID = "fill-sold";
 
 export function BurgersSoldChart({ selectedTimeframe }: BurgersSoldChartProps) {
   const chartData = burgersSoldByTimeframe[selectedTimeframe];
@@ -72,21 +75,33 @@ export function BurgersSoldChart({ selectedTimeframe }: BurgersSoldChartProps) {
         </p>
       </div>
       <ChartContainer config={burgersSoldChartConfig} className="h-56 w-full">
-        <LineChart accessibilityLayer data={chartData} margin={{ top: 6, right: 8, left: 8, bottom: 2 }}>
+        <AreaChart accessibilityLayer data={chartData} margin={{ top: 6, right: 8, left: 8, bottom: 2 }}>
+          <defs>
+            <linearGradient id={SOLD_FILL_GRADIENT_ID} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="var(--color-sold)" stopOpacity={0.8} />
+              <stop offset="95%" stopColor="var(--color-sold)" stopOpacity={0.1} />
+            </linearGradient>
+          </defs>
           <CartesianGrid vertical={false} />
           <XAxis dataKey="period" tickLine={false} tickMargin={10} axisLine={false} />
-          <YAxis tickLine={false} axisLine={false} />
-          <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+          <YAxis domain={[0, "auto"]} tickLine={false} axisLine={false} />
+          <ChartTooltip
+            cursor={false}
+            shared={false}
+            content={<ChartTooltipContent />}
+          />
           <ChartLegend content={<ChartLegendContent />} />
-          <Line
-            dataKey="sold"
+          <Area
             type="monotone"
+            dataKey="sold"
             stroke="var(--color-sold)"
             strokeWidth={3}
+            fill={`url(#${SOLD_FILL_GRADIENT_ID})`}
             dot={{ r: 4, fill: "var(--color-sold)" }}
-            activeDot={{ r: 6 }}
+            activeDot={{ r: 6, fill: "var(--color-sold)" }}
+            baseLine={0}
           />
-        </LineChart>
+        </AreaChart>
       </ChartContainer>
     </section>
   );
