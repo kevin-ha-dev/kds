@@ -1,22 +1,12 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getServerSupabaseClient } from "@/lib/supabase/server";
 import type { DeleteOrderRequestBody } from "@/types/order";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-const supabase =
-  supabaseUrl && supabaseServiceRoleKey
-    ? createClient(supabaseUrl, supabaseServiceRoleKey)
-    : null;
 
 export async function DELETE(req: Request) {
   try {
+    const { client: supabase, error: supabaseError } = getServerSupabaseClient();
     if (!supabase) {
-      return NextResponse.json(
-        { error: "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY." },
-        { status: 500 },
-      );
+      return NextResponse.json({ error: supabaseError }, { status: 500 });
     }
 
     const body = (await req.json()) as DeleteOrderRequestBody;
