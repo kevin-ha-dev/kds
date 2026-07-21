@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
+import {
+  commandLevelToIngredientAmount,
+  ingredientAmountsToDisplayList,
+  isSauceCommandCode,
+} from "@/lib/ingredients";
 import { getServerSupabaseClient } from "@/lib/supabase/server";
 import type { DbCommand, DbOrderCommand } from "@/types/command";
-import type { DbOrder } from "@/types/order";
+import type { DbOrder, IngredientAmount } from "@/types/order";
 
 export async function POST() {
   try {
@@ -62,10 +67,22 @@ export async function POST() {
 
     const formattedOrders = typedOrders.map((order) => {
       const commands = commandsByOrderId.get(order.id) ?? [];
-      const ingredients = commands
-        .filter((command) => !command.is_disabled)
-        .map((command) => ingredientByCommandCode.get(command.command_code))
-        .filter((ingredient): ingredient is string => Boolean(ingredient));
+      const ingredientAmounts: Record<string, IngredientAmount> = {};
+
+      for (const command of commands) {
+        if (command.is_disabled) {
+          continue;
+        }
+
+        const ingredientName = ingredientByCommandCode.get(command.command_code);
+        if (!ingredientName) {
+          continue;
+        }
+
+        ingredientAmounts[ingredientName] = commandLevelToIngredientAmount(command.command_level, {
+          isSauce: isSauceCommandCode(command.command_code),
+        });
+      }
 
       return {
         id: String(order.id),
@@ -75,7 +92,8 @@ export async function POST() {
             : 0,
         item: order.burger_name?.trim() || "Custom Burger",
         status: order.status,
-        ingredients,
+        ingredients: ingredientAmountsToDisplayList(ingredientAmounts),
+        ingredientAmounts,
       };
     });
 

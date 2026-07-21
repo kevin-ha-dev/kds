@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AddBurgerModal, Navbar, Receipt, Skeleton } from "@/components";
+import { AddBurgerModal, ConfirmDeleteModal, Navbar, Receipt, Skeleton } from "@/components";
 import { parseResponseJson } from "@/lib/parse-response-json";
 import { getBrowserSupabaseClient } from "@/lib/supabase/client";
 import type {
@@ -54,6 +54,7 @@ export default function OrdersPage() {
   const [isAddBurgerModalOpen, setIsAddBurgerModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [orderIdPendingDelete, setOrderIdPendingDelete] = useState<string | null>(null);
 
   const selectedOrder = orders.find((order) => order.id === selectedOrderId);
 
@@ -191,6 +192,7 @@ export default function OrdersPage() {
     const payload: CreateBurgerPayload = {
       burgerType: values.item,
       ingredients: values.ingredients,
+      ingredientAmounts: values.ingredientAmounts ?? {},
       trayNumber: values.trayNumber,
     };
 
@@ -204,6 +206,7 @@ export default function OrdersPage() {
         item: payload.burgerType,
         status: "pending",
         ingredients: payload.ingredients,
+        ingredientAmounts: payload.ingredientAmounts,
       },
     ]);
   };
@@ -218,12 +221,17 @@ export default function OrdersPage() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ orderId: selectedOrderId, trayNumber: values.trayNumber }),
+      body: JSON.stringify({
+        orderId: selectedOrderId,
+        trayNumber: values.trayNumber,
+        burgerType: values.item,
+        ingredientAmounts: values.ingredientAmounts ?? {},
+      }),
     });
 
     const data = (await response.json()) as { success?: boolean; error?: string };
     if (!response.ok || !data.success) {
-      throw new Error(data.error ?? "Failed to update tray number.");
+      throw new Error(data.error ?? "Failed to update order.");
     }
 
     setOrders((currentOrders) =>
@@ -234,6 +242,7 @@ export default function OrdersPage() {
               trayNumber: values.trayNumber,
               item: values.item,
               ingredients: values.ingredients,
+              ingredientAmounts: values.ingredientAmounts,
             }
           : order,
       ),
@@ -241,16 +250,17 @@ export default function OrdersPage() {
   };
 
   const handleDelete = async () => {
-    if (!selectedOrderId) {
+    if (!orderIdPendingDelete) {
       return;
     }
 
+    const orderId = orderIdPendingDelete;
     const response = await fetch("/api/orders/delete", {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ orderId: selectedOrderId }),
+      body: JSON.stringify({ orderId }),
     });
 
     const data = (await response.json()) as DeleteOrderResponse;
@@ -258,7 +268,7 @@ export default function OrdersPage() {
       throw new Error(data.error ?? "Failed to delete order.");
     }
 
-    setOrders((currentOrders) => currentOrders.filter((order) => order.id !== selectedOrderId));
+    setOrders((currentOrders) => currentOrders.filter((order) => order.id !== orderId));
   };
 
   return (
@@ -298,6 +308,7 @@ export default function OrdersPage() {
                       setSelectedOrderId(orderId);
                       setIsAddBurgerModalOpen(true);
                     }}
+                    onDelete={(orderId) => setOrderIdPendingDelete(orderId)}
                   />
                 ))}
           </div>
@@ -315,13 +326,19 @@ export default function OrdersPage() {
                 trayNumber: selectedOrder.trayNumber,
                 item: selectedOrder.item,
                 ingredients: selectedOrder.ingredients,
+                ingredientAmounts: selectedOrder.ingredientAmounts,
               }
             : undefined
         }
         onCreate={handleCreate}
         onUpdate={handleUpdate}
-        onDelete={handleDelete}
         onClose={closeModal}
+      />
+
+      <ConfirmDeleteModal
+        isOpen={orderIdPendingDelete != null}
+        onClose={() => setOrderIdPendingDelete(null)}
+        onConfirm={handleDelete}
       />
     </main>
   );

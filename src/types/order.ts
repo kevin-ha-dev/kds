@@ -1,5 +1,7 @@
 import type { CommandStatus } from "@/types/command";
 
+export type IngredientAmount = "none" | "normal" | "extra";
+
 export type OrderStatus = "pending" | "running" | "done" | "failed";
 
 export type Order = {
@@ -8,6 +10,7 @@ export type Order = {
   item: string;
   status: OrderStatus;
   ingredients: string[];
+  ingredientAmounts?: Record<string, IngredientAmount>;
 };
 
 export type CompletedOrder = {
@@ -50,6 +53,7 @@ export type CreateOrderRequestBody = {
   burgerType?: string;
   trayNumber?: number;
   ingredients?: string[];
+  ingredientAmounts?: Partial<Record<string, IngredientAmount>>;
 };
 
 export type DeleteOrderRequestBody = {
@@ -61,16 +65,20 @@ export type BurgerFormValues = {
   trayNumber: number;
   item: string;
   ingredients: string[];
+  ingredientAmounts?: Record<string, IngredientAmount>;
 };
 
-export type UpdateOrderTrayRequestBody = {
+export type UpdateOrderRequestBody = {
   orderId?: string;
   trayNumber?: number;
+  burgerType?: string;
+  ingredientAmounts?: Partial<Record<string, IngredientAmount>>;
 };
 
 export type CreateBurgerPayload = {
   burgerType: string;
   ingredients: string[];
+  ingredientAmounts: Record<string, IngredientAmount>;
   trayNumber: number;
 };
 

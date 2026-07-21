@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { BurgersSoldChart, InventoryLevelsChart, Navbar } from "@/components";
-import { pageTitleSectionWithDottedRuleClassName } from "@/lib/page-section-classes";
 
 const timeframeOptions = ["Today", "Week", "Month", "Year"] as const;
 type Timeframe = (typeof timeframeOptions)[number];
@@ -23,7 +22,7 @@ export default function InventoryPage() {
     <main className="h-screen overflow-hidden bg-white px-6 py-8 text-zinc-900 lg:px-10">
       <div className="mx-auto flex w-full max-w-384 flex-col gap-8">
         <Navbar />
-        <section className={pageTitleSectionWithDottedRuleClassName}>
+        <section className="grid grid-cols-1 gap-3 border-b border-dotted border-zinc-300 pb-4 md:grid-cols-[1fr_auto] md:items-end">
           <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Inventory</h1>
           <div className="justify-self-start md:justify-self-end">
             <label htmlFor="inventory-timeframe" className="sr-only">

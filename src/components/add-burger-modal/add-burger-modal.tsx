@@ -1,7 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { BurgerFormValues } from "@/types/order";
+import { useEffect, useRef, useState } from "react";
+import {
+  createDefaultIngredientAmounts,
+  INGREDIENT_AMOUNT_OPTIONS,
+  ingredientAmountsToDisplayList,
+  parseIngredientDisplayList,
+} from "@/lib/ingredients";
+import type { BurgerFormValues, IngredientAmount } from "@/types/order";
 
 type AddBurgerModalProps = {
   isOpen: boolean;
@@ -11,7 +17,6 @@ type AddBurgerModalProps = {
   initialValues?: BurgerFormValues;
   onCreate?: (values: BurgerFormValues) => void | Promise<void>;
   onUpdate?: (values: BurgerFormValues) => void | Promise<void>;
-  onDelete?: () => void | Promise<void>;
 };
 
 const burgerTypes = [
@@ -28,9 +33,51 @@ const ingredients = [
   "Onions",
   "Pickles",
   "Gochujang",
-  "Ketchup",
+  "Garlic Aioli",
 ] as const;
-const availableIngredients = new Set<string>(ingredients);
+
+const amountLabels: Record<IngredientAmount, string> = {
+  none: "None",
+  normal: "Normal",
+  extra: "Extra",
+};
+
+type IngredientAmountControlProps = {
+  ingredient: string;
+  amount: IngredientAmount;
+  selected: boolean;
+  onChange: (ingredient: string, amount: IngredientAmount) => void;
+};
+
+function IngredientAmountControl({
+  ingredient,
+  amount,
+  selected,
+  onChange,
+}: IngredientAmountControlProps) {
+  const inputId = `amount-${ingredient}-${amount}`;
+
+  return (
+    <label
+      htmlFor={inputId}
+      className={`flex h-7 cursor-pointer items-center justify-center rounded-sm px-1 transition-colors ${
+        selected
+          ? "bg-zinc-100 text-zinc-800"
+          : "text-zinc-400 hover:text-zinc-600"
+      }`}
+    >
+      <input
+        id={inputId}
+        type="radio"
+        name={`amount-${ingredient}`}
+        checked={selected}
+        onChange={() => onChange(ingredient, amount)}
+        className="sr-only"
+      />
+      <span className="text-[10px] font-medium tracking-wide">{amountLabels[amount]}</span>
+    </label>
+  );
+}
 
 export function AddBurgerModal({
   isOpen,
@@ -40,28 +87,45 @@ export function AddBurgerModal({
   initialValues,
   onCreate,
   onUpdate,
-  onDelete,
 }: AddBurgerModalProps) {
   const [burgerType, setBurgerType] = useState<string>(burgerTypes[0]);
-  const [selectedIngredients, setSelectedIngredients] = useState<string[]>([...ingredients]);
+  const [ingredientAmounts, setIngredientAmounts] = useState<Record<string, IngredientAmount>>(
+    () => createDefaultIngredientAmounts(ingredients),
+  );
   const [trayNumberInput, setTrayNumberInput] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const openSessionRef = useRef<string | null>(null);
+  const isSubmittingRef = useRef(false);
 
   useEffect(() => {
     if (!isOpen) {
+      openSessionRef.current = null;
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
       return;
     }
 
+    const sessionKey = initialValues?.id ?? "create";
+    if (openSessionRef.current === sessionKey) {
+      return;
+    }
+    openSessionRef.current = sessionKey;
+    isSubmittingRef.current = false;
+    setIsSubmitting(false);
+
     if (initialValues) {
       setBurgerType(initialValues.item);
-      setSelectedIngredients(
-        initialValues.ingredients.filter((ingredient) => availableIngredients.has(ingredient)),
-      );
+      setIngredientAmounts({
+        ...createDefaultIngredientAmounts(ingredients, "none"),
+        ...(initialValues.ingredientAmounts ??
+          parseIngredientDisplayList(initialValues.ingredients, ingredients)),
+      });
       setTrayNumberInput(String(initialValues.trayNumber));
       return;
     }
 
     setBurgerType(burgerTypes[0]);
-    setSelectedIngredients([...ingredients]);
+    setIngredientAmounts(createDefaultIngredientAmounts(ingredients));
     const fallbackTray =
       suggestedTrayNumber != null && Number.isFinite(suggestedTrayNumber)
         ? suggestedTrayNumber
@@ -73,30 +137,38 @@ export function AddBurgerModal({
     return null;
   }
 
-  const toggleIngredient = (ingredient: string) => {
-    setSelectedIngredients((currentIngredients) =>
-      currentIngredients.includes(ingredient)
-        ? currentIngredients.filter((item) => item !== ingredient)
-        : [...currentIngredients, ingredient],
-    );
+  const setIngredientAmount = (ingredient: string, amount: IngredientAmount) => {
+    setIngredientAmounts((current) => ({
+      ...current,
+      [ingredient]: amount,
+    }));
   };
 
   const parsedTrayNumber = Number.parseInt(trayNumberInput.trim(), 10);
 
   const handlePrimaryAction = async () => {
-    try {
-      if (!Number.isFinite(parsedTrayNumber)) {
-        console.error("Save burger failed", new Error("Enter a valid tray number."));
-        return;
-      }
+    if (isSubmittingRef.current) {
+      return;
+    }
 
+    if (!Number.isFinite(parsedTrayNumber)) {
+      console.error("Save burger failed", new Error("Enter a valid tray number."));
+      return;
+    }
+
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
+
+    try {
       const orderId = initialValues?.id ?? "";
+      const displayIngredients = ingredientAmountsToDisplayList(ingredientAmounts, ingredients);
 
       const currentValues: BurgerFormValues = {
         id: orderId,
         trayNumber: parsedTrayNumber,
         item: burgerType,
-        ingredients: selectedIngredients,
+        ingredients: displayIngredients,
+        ingredientAmounts,
       };
 
       if (mode === "edit") {
@@ -107,15 +179,8 @@ export function AddBurgerModal({
       onClose();
     } catch (error) {
       console.error("Save burger failed", error);
-    }
-  };
-
-  const handleDelete = async () => {
-    try {
-      await onDelete?.();
-      onClose();
-    } catch (error) {
-      console.error("Delete burger failed", error);
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
@@ -150,9 +215,9 @@ export function AddBurgerModal({
               onChange={(event) => setBurgerType(event.target.value)}
               className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors focus:border-zinc-500"
             >
-              {burgerTypes.map((burgerType) => (
-                <option key={burgerType} value={burgerType}>
-                  {burgerType}
+              {burgerTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type}
                 </option>
               ))}
             </select>
@@ -160,18 +225,32 @@ export function AddBurgerModal({
 
           <section>
             <p className="mb-2 text-sm font-semibold text-zinc-800">Ingredients</p>
-            <div className="space-y-2 rounded-lg border border-zinc-200 p-3">
-              {ingredients.map((ingredient) => (
-                <label key={ingredient} className="flex items-center gap-2 text-sm text-zinc-800">
-                  <input
-                    type="checkbox"
-                    checked={selectedIngredients.includes(ingredient)}
-                    onChange={() => toggleIngredient(ingredient)}
-                    className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-500"
-                  />
-                  {ingredient}
-                </label>
-              ))}
+            <div className="rounded-lg border border-zinc-200">
+              <div className="divide-y divide-zinc-100">
+                {ingredients.map((ingredient) => (
+                  <div
+                    key={ingredient}
+                    className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2"
+                  >
+                    <span className="text-sm text-zinc-700">{ingredient}</span>
+                    <div
+                      className="grid w-40 grid-cols-3 gap-0.5"
+                      role="radiogroup"
+                      aria-label={`${ingredient} portion`}
+                    >
+                      {INGREDIENT_AMOUNT_OPTIONS.map((amount) => (
+                        <IngredientAmountControl
+                          key={`${ingredient}-${amount}`}
+                          ingredient={ingredient}
+                          amount={amount}
+                          selected={(ingredientAmounts[ingredient] ?? "normal") === amount}
+                          onChange={setIngredientAmount}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
 
@@ -193,21 +272,13 @@ export function AddBurgerModal({
         </div>
 
         <div className="mt-6 flex justify-end gap-2">
-          {mode === "edit" ? (
-            <button
-              type="button"
-              onClick={handleDelete}
-              className="rounded-full border border-red-300 px-5 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50"
-            >
-              Delete
-            </button>
-          ) : null}
           <button
             type="button"
             onClick={handlePrimaryAction}
-            className="rounded-full bg-black px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
+            disabled={isSubmitting}
+            className="rounded-full bg-black px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
           >
-            {mode === "edit" ? "Update" : "Create"}
+            {isSubmitting ? "Saving..." : mode === "edit" ? "Update" : "Create"}
           </button>
         </div>
       </div>
