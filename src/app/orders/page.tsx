@@ -305,35 +305,41 @@ export default function OrdersPage() {
             }}
           />
         </div>
-        <section className="mt-4 grid grid-cols-1 gap-3 border-b border-zinc-200 pb-4 md:grid-cols-[1fr_auto] md:items-end">
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Orders</h1>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-            Active Tickets: {isLoading ? "..." : orders.length}
-          </p>
-        </section>
         <section
-          className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="mt-6 min-h-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           style={{ msOverflowStyle: "none" }}
         >
-          <div className="grid grid-cols-1 gap-5 pt-8 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-            {isLoading
-              ? Array.from({ length: 6 }, (_, index) => <OrderReceiptSkeleton key={index} />)
-              : orders.map((order) => (
-                  <Receipt
-                    key={order.id}
-                    orderId={order.id}
-                    trayNumber={order.trayNumber}
-                    item={order.item}
-                    ingredients={order.ingredients}
-                    onEdit={(orderId) => {
-                      setModalMode("edit");
-                      setSelectedOrderId(orderId);
-                      setIsAddBurgerModalOpen(true);
-                    }}
-                    onDelete={(orderId) => setOrderIdPendingDelete(orderId)}
-                  />
-                ))}
-          </div>
+          {isLoading ? (
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              {Array.from({ length: 6 }, (_, index) => (
+                <OrderReceiptSkeleton key={index} />
+              ))}
+            </div>
+          ) : orders.length === 0 ? (
+            <div className="flex h-full items-center justify-center px-6 pb-28">
+              <p className="text-base tracking-wide text-zinc-400">
+                New tickets will show up here.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              {orders.map((order) => (
+                <Receipt
+                  key={order.id}
+                  orderId={order.id}
+                  trayNumber={order.trayNumber}
+                  item={order.item}
+                  ingredients={order.ingredients}
+                  onEdit={(orderId) => {
+                    setModalMode("edit");
+                    setSelectedOrderId(orderId);
+                    setIsAddBurgerModalOpen(true);
+                  }}
+                  onDelete={(orderId) => setOrderIdPendingDelete(orderId)}
+                />
+              ))}
+            </div>
+          )}
         </section>
       </div>
 
