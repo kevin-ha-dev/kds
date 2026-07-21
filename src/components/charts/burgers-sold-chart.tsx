@@ -65,8 +65,8 @@ export function BurgersSoldChart({ selectedTimeframe }: BurgersSoldChartProps) {
   const totalBurgersSold = chartData.reduce((sum, entry) => sum + entry.sold, 0);
 
   return (
-    <section className="flex flex-col rounded-xl border border-zinc-200 bg-white px-4 py-10 shadow-sm md:px-6">
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+    <section className="flex h-full min-h-0 flex-col rounded-xl border border-zinc-200 bg-white px-4 py-4 shadow-sm md:px-6">
+      <div className="mb-3 flex shrink-0 flex-wrap items-end justify-between gap-2">
         <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-zinc-500">
           Burgers Sold
         </h2>
@@ -74,7 +74,7 @@ export function BurgersSoldChart({ selectedTimeframe }: BurgersSoldChartProps) {
           Total: <span className="text-zinc-900">{totalBurgersSold.toLocaleString()}</span>
         </p>
       </div>
-      <ChartContainer config={burgersSoldChartConfig} className="h-56 w-full">
+      <ChartContainer config={burgersSoldChartConfig} className="min-h-0 w-full flex-1">
         <AreaChart accessibilityLayer data={chartData} margin={{ top: 6, right: 8, left: 8, bottom: 2 }}>
           <defs>
             <linearGradient id={SOLD_FILL_GRADIENT_ID} x1="0" y1="0" x2="0" y2="1">

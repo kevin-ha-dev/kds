@@ -17,12 +17,10 @@ export const NORMAL_COMMAND_LEVEL = 1;
 export const EXTRA_COMMAND_LEVEL = 2;
 
 /** Stored veggie levels after DB normalize (station 1 / dispensers). */
-export const VEGGIE_LESS_STORED_LEVEL = 1;
 export const VEGGIE_NORMAL_STORED_LEVEL = 2;
 export const VEGGIE_EXTRA_STORED_LEVEL = 3;
 
 /** Stored sauce levels after DB normalize (station 2). */
-export const SAUCE_LESS_STORED_LEVEL = 25;
 export const SAUCE_NORMAL_STORED_LEVEL = 50;
 export const SAUCE_EXTRA_STORED_LEVEL = 75;
 

@@ -69,11 +69,11 @@ export function InventoryLevelsChart({ selectedTimeframe }: InventoryLevelsChart
   const chartData = inventoryChartDataByTimeframe[selectedTimeframe];
 
   return (
-    <section className="flex flex-col rounded-xl border border-zinc-200 bg-white px-4 py-10 shadow-sm md:px-6">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-[0.14em] text-zinc-500">
+    <section className="flex h-full min-h-0 flex-col rounded-xl border border-zinc-200 bg-white px-4 py-4 shadow-sm md:px-6">
+      <h2 className="mb-3 shrink-0 text-sm font-semibold uppercase tracking-[0.14em] text-zinc-500">
         Ingredient Levels
       </h2>
-      <ChartContainer config={inventoryChartConfig} className="h-56 w-full">
+      <ChartContainer config={inventoryChartConfig} className="min-h-0 w-full flex-1">
         <BarChart accessibilityLayer data={chartData} margin={{ top: 6, right: 8, left: 0, bottom: 2 }}>
           <defs>
             <linearGradient id={IN_STOCK_FILL_GRADIENT_ID} x1="0" y1="0" x2="0" y2="1">

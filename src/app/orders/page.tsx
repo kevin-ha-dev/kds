@@ -15,6 +15,25 @@ import type {
 
 const initialOrders: Order[] = [];
 
+/** Active tickets stay in queue order: oldest at the front, newest at the back. */
+const sortOrdersAsQueue = (orders: Order[]) =>
+  [...orders].sort((a, b) => {
+    const aCreated = a.createdAt ? Date.parse(a.createdAt) : Number.NaN;
+    const bCreated = b.createdAt ? Date.parse(b.createdAt) : Number.NaN;
+
+    if (Number.isFinite(aCreated) && Number.isFinite(bCreated) && aCreated !== bCreated) {
+      return aCreated - bCreated;
+    }
+
+    const aId = Number.parseInt(a.id, 10);
+    const bId = Number.parseInt(b.id, 10);
+    if (Number.isFinite(aId) && Number.isFinite(bId)) {
+      return aId - bId;
+    }
+
+    return a.id.localeCompare(b.id);
+  });
+
 const getNextTrayNumber = (orders: Order[]) => {
   const trays = orders
     .map((order) => order.trayNumber)
@@ -75,7 +94,7 @@ export default function OrdersPage() {
       throw new Error(data.error ?? "Failed to load active orders.");
     }
 
-    setOrders(data.orders ?? []);
+    setOrders(sortOrdersAsQueue(data.orders ?? []));
   };
 
   const closeModal = () => {
@@ -198,17 +217,20 @@ export default function OrdersPage() {
 
     const { orderId, trayNumber } = await handleCreateBurger(payload);
 
-    setOrders((currentOrders) => [
-      ...currentOrders,
-      {
-        id: orderId,
-        trayNumber,
-        item: payload.burgerType,
-        status: "pending",
-        ingredients: payload.ingredients,
-        ingredientAmounts: payload.ingredientAmounts,
-      },
-    ]);
+    setOrders((currentOrders) =>
+      sortOrdersAsQueue([
+        ...currentOrders,
+        {
+          id: orderId,
+          trayNumber,
+          item: payload.burgerType,
+          status: "pending",
+          ingredients: payload.ingredients,
+          ingredientAmounts: payload.ingredientAmounts,
+          createdAt: new Date().toISOString(),
+        },
+      ]),
+    );
   };
 
   const handleUpdate = async (values: BurgerFormValues) => {

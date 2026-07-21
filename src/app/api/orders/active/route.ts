@@ -15,11 +15,13 @@ export async function POST() {
       return NextResponse.json({ error: supabaseError }, { status: 500 });
     }
 
+    // Queue order: oldest first, newest at the back.
     const { data: orders, error: ordersError } = await supabase
       .from("orders")
-      .select("id, status, burger_name, tray_number")
+      .select("id, status, burger_name, tray_number, created_at")
       .in("status", ["pending", "running"])
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true });
 
     if (ordersError) {
       return NextResponse.json({ error: ordersError.message }, { status: 500 });
@@ -94,6 +96,7 @@ export async function POST() {
         status: order.status,
         ingredients: ingredientAmountsToDisplayList(ingredientAmounts),
         ingredientAmounts,
+        createdAt: order.created_at,
       };
     });
 

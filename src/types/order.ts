@@ -11,6 +11,8 @@ export type Order = {
   status: OrderStatus;
   ingredients: string[];
   ingredientAmounts?: Record<string, IngredientAmount>;
+  /** ISO timestamp; used to keep active orders in queue order (oldest first). */
+  createdAt?: string;
 };
 
 export type CompletedOrder = {
@@ -108,6 +110,7 @@ export type DbOrder = {
   status: OrderStatus;
   burger_name: string | null;
   tray_number: number | null;
+  created_at?: string;
 };
 
 export type DbCompletedOrder = {

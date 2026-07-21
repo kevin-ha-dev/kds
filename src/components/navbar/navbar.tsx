@@ -9,8 +9,7 @@ type NavbarProps = {
 
 const navItems = [
   { label: "Orders", href: "/orders" },
-  { label: "Completed", href: "/completed" },
-  { label: "Inventory", href: "/inventory" },
+  { label: "Dashboard", href: "/dashboard" },
 ] as const;
 export function Navbar({ onBuildBurgerClick }: NavbarProps) {
   const pathname = usePathname();
@@ -53,8 +52,14 @@ export function Navbar({ onBuildBurgerClick }: NavbarProps) {
             <button
               type="button"
               onClick={onBuildBurgerClick}
-              className="rounded-full bg-black px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
+              className="inline-flex items-center gap-2 rounded-full bg-zinc-900 px-4 py-2 text-sm font-semibold tracking-wide text-white transition-colors hover:bg-zinc-800"
             >
+              <span
+                aria-hidden
+                className="flex h-5 w-5 items-center justify-center rounded-full bg-white/12 text-[13px] leading-none"
+              >
+                +
+              </span>
               Build Burger
             </button>
           ) : null}
