@@ -169,13 +169,6 @@ export default function DashboardPage() {
         <section className="mt-6 grid min-h-0 flex-1 grid-rows-[minmax(0,1.15fr)_minmax(0,1fr)] gap-5 overflow-hidden pb-6">
           <div className="grid min-h-0 grid-cols-1 gap-5 lg:grid-cols-2">
             <div className="flex min-h-0 flex-col">
-              <div className="mb-3 grid shrink-0 grid-cols-1 gap-3 border-b border-dotted border-zinc-300 pb-3 md:grid-cols-[1fr_auto] md:items-end">
-                <h2 className="text-xl font-semibold tracking-tight text-zinc-900">Completed</h2>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                  Total: {isLoading ? "..." : completedOrders.length}
-                </p>
-              </div>
-
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white px-4 py-3 shadow-sm md:px-6 md:py-4">
                 <div className={`shrink-0 ${COMPLETED_TABLE_HEADER_GRID_CLASS}`}>
                   {isLoading ? (
