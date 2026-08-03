@@ -12,8 +12,6 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Bun gRPC subpackage; lint with its own config if needed
-    "grpc-server/**",
   ]),
 ]);
 

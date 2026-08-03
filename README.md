@@ -13,8 +13,6 @@ This repo is configured for **Option A** integration:
 - Existing connector contract remains stable.
 - KDS side is rebuilt on this stack and integrated through the existing event/contract boundary.
 
-Pi / device gRPC contract is implemented under `grpc-server/` (see `grpc-server/README.md`).
-
 ## Prerequisites
 
 - Node.js 22+

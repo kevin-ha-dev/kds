@@ -107,6 +107,7 @@ export type CreateOrderResponse = {
 
 export type DbOrder = {
   id: number;
+  client_id: number;
   status: OrderStatus;
   burger_name: string | null;
   tray_number: number | null;
