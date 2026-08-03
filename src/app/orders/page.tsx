@@ -295,7 +295,7 @@ export default function OrdersPage() {
 
   return (
     <main className="h-screen overflow-hidden bg-white px-6 pt-8 pb-0 text-zinc-900 lg:px-10">
-      <div className="mx-auto flex h-full w-full min-h-0 max-w-384 flex-col">
+      <div className="flex h-full w-full min-h-0 flex-col">
         <div className="mb-4">
           <Navbar />
         </div>
