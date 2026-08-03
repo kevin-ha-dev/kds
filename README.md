@@ -3,7 +3,6 @@
 KDS rebuild bootstrap using:
 
 - Next.js + React + Tailwind
-- Tauri desktop shell
 - Supabase
 
 ## Why this setup
@@ -19,7 +18,6 @@ Pi / device gRPC contract is implemented under `grpc-server/` (see `grpc-server/
 ## Prerequisites
 
 - Node.js 22+
-- Rust toolchain (for Tauri)
 
 ## Environment
 
@@ -35,19 +33,6 @@ npm install
 npm run dev
 ```
 
-## Run desktop app (Tauri)
-
-```bash
-npm run tauri:dev
-```
-
-## Build desktop app
-
-```bash
-npm run tauri:build
-```
-
 ## Notes
 
-- Next is configured with `output: "export"` for Tauri static bundling.
 - If you need server-side APIs, run a separate backend/worker service (recommended for queue processing and idempotency).

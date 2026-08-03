@@ -20,10 +20,6 @@
 # production
 /build
 
-# tauri / rust build outputs
-/src-tauri/target/
-/src-tauri/
-
 # misc
 .DS_Store
 *.pem

@@ -297,20 +297,14 @@ export default function OrdersPage() {
     <main className="h-screen overflow-hidden bg-white px-6 pt-8 pb-0 text-zinc-900 lg:px-10">
       <div className="mx-auto flex h-full w-full min-h-0 max-w-384 flex-col">
         <div className="mb-4">
-          <Navbar
-            onBuildBurgerClick={() => {
-              setModalMode("create");
-              setSelectedOrderId(null);
-              setIsAddBurgerModalOpen(true);
-            }}
-          />
+          <Navbar />
         </div>
         <section
           className="mt-6 min-h-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           style={{ msOverflowStyle: "none" }}
         >
           {isLoading ? (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-5 pb-24 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {Array.from({ length: 6 }, (_, index) => (
                 <OrderReceiptSkeleton key={index} />
               ))}
@@ -322,7 +316,7 @@ export default function OrdersPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-5 pb-24 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {orders.map((order) => (
                 <Receipt
                   key={order.id}
@@ -342,6 +336,24 @@ export default function OrdersPage() {
           )}
         </section>
       </div>
+
+      <button
+        type="button"
+        onClick={() => {
+          setModalMode("create");
+          setSelectedOrderId(null);
+          setIsAddBurgerModalOpen(true);
+        }}
+        className="fixed right-6 bottom-6 z-40 inline-flex items-center gap-2 rounded-full bg-zinc-900 px-4 py-3 text-sm font-semibold tracking-wide text-white shadow-lg transition-colors hover:bg-zinc-800 lg:right-10"
+      >
+        <span
+          aria-hidden
+          className="flex h-5 w-5 items-center justify-center rounded-full bg-white/12 text-[13px] leading-none"
+        >
+          +
+        </span>
+        Build Burger
+      </button>
 
       <AddBurgerModal
         isOpen={isAddBurgerModalOpen}
