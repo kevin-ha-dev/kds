@@ -337,6 +337,38 @@ export default function OrdersPage() {
         </section>
       </div>
 
+      {!isLoading && orders.length === 0 && (
+        <div
+          aria-hidden
+          className="pointer-events-none fixed right-16 bottom-24 z-30 flex flex-col items-start lg:right-20"
+        >
+          <span className="mb-1 -translate-x-24 translate-y-6 font-mono text-sm font-medium tracking-wide text-amber-500">
+            Start here
+          </span>
+          <svg
+            width="80"
+            height="100"
+            viewBox="0 0 80 100"
+            fill="none"
+            className="-translate-x-[72px] translate-y-6 text-amber-500"
+          >
+            <path
+              d="M20 6C8 40 40 60 64 84"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinecap="round"
+            />
+            <path
+              d="M59 69L64 84L49 79"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+      )}
+
       <button
         type="button"
         onClick={() => {

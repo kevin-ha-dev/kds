@@ -167,7 +167,7 @@ export function LiveCameraFeed({ className, whepUrl = DEFAULT_WHEP_URL }: LiveCa
   }, [whepUrl]);
 
   return (
-    <section className={`flex min-h-0 flex-col ${className ?? ""}`}>
+    <section className={`flex min-h-0 flex-col ${className ?? ""}`} style={{ minHeight: 220 }}>
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
         <div
           ref={containerRef}
@@ -198,15 +198,6 @@ export function LiveCameraFeed({ className, whepUrl = DEFAULT_WHEP_URL }: LiveCa
                   {status === "connecting" ? "Connecting to live feed…" : "Reconnecting to live feed…"}
                 </p>
               </div>
-            </div>
-          )}
-
-          {status === "live" && (
-            <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 backdrop-blur-sm">
-              <span className="h-2 w-2 rounded-full bg-red-500 shadow-[0_0_0_3px_rgba(239,68,68,0.25)]" />
-              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
-                Live
-              </span>
             </div>
           )}
         </div>
