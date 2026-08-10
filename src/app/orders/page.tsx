@@ -34,14 +34,6 @@ const sortOrdersAsQueue = (orders: Order[]) =>
     return a.id.localeCompare(b.id);
   });
 
-const getNextTrayNumber = (orders: Order[]) => {
-  const trays = orders
-    .map((order) => order.trayNumber)
-    .filter((n) => Number.isFinite(n));
-  const maxTray = trays.length > 0 ? Math.max(...trays) : 0;
-  return maxTray + 1;
-};
-
 const OrderReceiptSkeleton = () => (
   <article
     className="grid min-h-70 h-full grid-rows-[auto_auto_1fr] gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm"
@@ -390,7 +382,6 @@ export default function OrdersPage() {
       <AddBurgerModal
         isOpen={isAddBurgerModalOpen}
         mode={modalMode}
-        suggestedTrayNumber={getNextTrayNumber(orders)}
         initialValues={
           modalMode === "edit" && selectedOrder
             ? {

@@ -13,7 +13,6 @@ type AddBurgerModalProps = {
   isOpen: boolean;
   onClose: () => void;
   mode?: "create" | "edit";
-  suggestedTrayNumber?: number;
   initialValues?: BurgerFormValues;
   onCreate?: (values: BurgerFormValues) => void | Promise<void>;
   onUpdate?: (values: BurgerFormValues) => void | Promise<void>;
@@ -41,6 +40,12 @@ const amountLabels: Record<IngredientAmount, string> = {
   normal: "Normal",
   extra: "Extra",
 };
+
+/**
+ * Gap after which the next digit starts a new tray scan (replace), instead of
+ * continuing the current buffer. Long enough for normal typing; scanners are much faster.
+ */
+const SCAN_BURST_GAP_MS = 500;
 
 type IngredientAmountControlProps = {
   ingredient: string;
@@ -83,7 +88,6 @@ export function AddBurgerModal({
   isOpen,
   onClose,
   mode = "create",
-  suggestedTrayNumber,
   initialValues,
   onCreate,
   onUpdate,
@@ -96,6 +100,10 @@ export function AddBurgerModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const openSessionRef = useRef<string | null>(null);
   const isSubmittingRef = useRef(false);
+  const trayInputRef = useRef<HTMLInputElement>(null);
+  const scanBufferRef = useRef("");
+  const lastScanDigitAtRef = useRef(0);
+  const scanBurstEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
@@ -126,12 +134,114 @@ export function AddBurgerModal({
 
     setBurgerType(burgerTypes[0]);
     setIngredientAmounts(createDefaultIngredientAmounts(ingredients));
-    const fallbackTray =
-      suggestedTrayNumber != null && Number.isFinite(suggestedTrayNumber)
-        ? suggestedTrayNumber
-        : 1;
-    setTrayNumberInput(String(fallbackTray));
-  }, [initialValues, isOpen, suggestedTrayNumber]);
+    setTrayNumberInput("");
+  }, [initialValues, isOpen]);
+
+  // Auto-focus tray # and capture USB scanner digits while the modal is open.
+  // Digits are applied through our buffer (replace on each new burst) so a second
+  // scan never appends onto the previous tray number via the native input.
+  useEffect(() => {
+    if (!isOpen) {
+      scanBufferRef.current = "";
+      lastScanDigitAtRef.current = 0;
+      if (scanBurstEndTimerRef.current) {
+        clearTimeout(scanBurstEndTimerRef.current);
+        scanBurstEndTimerRef.current = null;
+      }
+      return;
+    }
+
+    const focusTrayInput = () => {
+      const input = trayInputRef.current;
+      if (!input) {
+        return;
+      }
+      input.focus();
+      input.select();
+    };
+
+    const focusTimer = setTimeout(focusTrayInput, 0);
+
+    const scheduleBurstEnd = () => {
+      if (scanBurstEndTimerRef.current) {
+        clearTimeout(scanBurstEndTimerRef.current);
+      }
+      // After a pause, end the burst so the next scan starts a fresh replace.
+      scanBurstEndTimerRef.current = setTimeout(() => {
+        scanBufferRef.current = "";
+        lastScanDigitAtRef.current = 0;
+        scanBurstEndTimerRef.current = null;
+        trayInputRef.current?.select();
+      }, SCAN_BURST_GAP_MS);
+    };
+
+    const applyScanBuffer = (next: string) => {
+      scanBufferRef.current = next;
+      setTrayNumberInput(next);
+      scheduleBurstEnd();
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (isSubmittingRef.current) {
+        return;
+      }
+
+      const isDigit = event.key.length === 1 && event.key >= "0" && event.key <= "9";
+      const isEnter = event.key === "Enter";
+
+      if (isDigit) {
+        // Always own digit input so the focused tray field cannot append natively.
+        event.preventDefault();
+        event.stopPropagation();
+
+        const now = performance.now();
+        const gap = now - lastScanDigitAtRef.current;
+        lastScanDigitAtRef.current = now;
+
+        const continuingBurst =
+          scanBufferRef.current.length > 0 && gap < SCAN_BURST_GAP_MS;
+
+        if (continuingBurst) {
+          applyScanBuffer(scanBufferRef.current + event.key);
+        } else {
+          // New scan / new typed number — replace whatever was there.
+          applyScanBuffer(event.key);
+        }
+
+        trayInputRef.current?.focus();
+        return;
+      }
+
+      if (isEnter && scanBufferRef.current.length > 0) {
+        event.preventDefault();
+        event.stopPropagation();
+        const scanned = scanBufferRef.current;
+        scanBufferRef.current = "";
+        lastScanDigitAtRef.current = 0;
+        if (scanBurstEndTimerRef.current) {
+          clearTimeout(scanBurstEndTimerRef.current);
+          scanBurstEndTimerRef.current = null;
+        }
+        setTrayNumberInput(scanned);
+        trayInputRef.current?.focus();
+        trayInputRef.current?.select();
+      }
+    };
+
+    // Capture phase so scanner keys win over focused controls / Create button.
+    window.addEventListener("keydown", onKeyDown, true);
+
+    return () => {
+      clearTimeout(focusTimer);
+      window.removeEventListener("keydown", onKeyDown, true);
+      scanBufferRef.current = "";
+      lastScanDigitAtRef.current = 0;
+      if (scanBurstEndTimerRef.current) {
+        clearTimeout(scanBurstEndTimerRef.current);
+        scanBurstEndTimerRef.current = null;
+      }
+    };
+  }, [isOpen]);
 
   if (!isOpen) {
     return null;
@@ -259,12 +369,18 @@ export function AddBurgerModal({
               Tray #
             </label>
             <input
+              ref={trayInputRef}
               id="tray-number"
-              type="number"
+              type="text"
               inputMode="numeric"
-              min={1}
+              autoComplete="off"
               value={trayNumberInput}
-              onChange={(event) => setTrayNumberInput(event.target.value)}
+              onChange={(event) => {
+                const next = event.target.value.replace(/\D/g, "");
+                scanBufferRef.current = "";
+                lastScanDigitAtRef.current = 0;
+                setTrayNumberInput(next);
+              }}
               placeholder="Tray number"
               className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 outline-none transition-colors placeholder:text-zinc-400 focus:border-zinc-500"
             />
