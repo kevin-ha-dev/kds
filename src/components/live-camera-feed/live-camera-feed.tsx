@@ -6,8 +6,8 @@ type LiveCameraFeedProps = {
   className?: string;
   /**
    * MediaMTX WHEP (WebRTC) endpoint for the camera.
-   * Defaults to the `usbcam` stream published at rtsp://192.168.0.141:8554/usbcam,
-   * which MediaMTX also exposes over WebRTC on port 8889.
+   * Defaults to the `usbcam` stream on http://192.168.0.123:8889/usbcam
+   * (WHEP handshake at `/whep`).
    */
   whepUrl?: string;
 };
@@ -15,7 +15,7 @@ type LiveCameraFeedProps = {
 type FeedStatus = "connecting" | "live" | "error";
 
 const DEFAULT_WHEP_URL =
-  process.env.NEXT_PUBLIC_CAMERA_WHEP_URL ?? "http://192.168.0.141:8889/usbcam/whep";
+  process.env.NEXT_PUBLIC_CAMERA_WHEP_URL ?? "http://192.168.0.123:8889/usbcam/whep";
 
 /** Wait until ICE gathering finishes so we can POST a complete (non-trickle) offer. */
 function waitForIceGathering(pc: RTCPeerConnection): Promise<void> {
