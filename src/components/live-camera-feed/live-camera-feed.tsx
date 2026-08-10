@@ -1,45 +1,27 @@
 "use client";
 
+import Hls from "hls.js";
 import { useEffect, useRef, useState } from "react";
 
 type LiveCameraFeedProps = {
   className?: string;
   /**
-   * MediaMTX WHEP (WebRTC) endpoint for the camera.
-   * Defaults to the `usbcam` stream on http://192.168.0.123:8889/usbcam
-   * (WHEP handshake at `/whep`).
+   * MediaMTX HLS playlist for the camera.
+   * Defaults to the Tailscale-served `usbcam` stream.
    */
-  whepUrl?: string;
+  streamUrl?: string;
 };
 
 type FeedStatus = "connecting" | "live" | "error";
 
-const DEFAULT_WHEP_URL =
-  process.env.NEXT_PUBLIC_CAMERA_WHEP_URL ?? "http://192.168.0.123:8889/usbcam/whep";
+const DEFAULT_STREAM_URL =
+  process.env.NEXT_PUBLIC_CAMERA_HLS_URL ??
+  "https://raspberrypi.tail93a11d.ts.net/usbcam/index.m3u8";
 
-/** Wait until ICE gathering finishes so we can POST a complete (non-trickle) offer. */
-function waitForIceGathering(pc: RTCPeerConnection): Promise<void> {
-  if (pc.iceGatheringState === "complete") {
-    return Promise.resolve();
-  }
-
-  return new Promise((resolve) => {
-    const checkState = () => {
-      if (pc.iceGatheringState === "complete") {
-        pc.removeEventListener("icegatheringstatechange", checkState);
-        resolve();
-      }
-    };
-    pc.addEventListener("icegatheringstatechange", checkState);
-    // Safety timeout: some networks never report `complete`.
-    setTimeout(() => {
-      pc.removeEventListener("icegatheringstatechange", checkState);
-      resolve();
-    }, 2000);
-  });
-}
-
-export function LiveCameraFeed({ className, whepUrl = DEFAULT_WHEP_URL }: LiveCameraFeedProps) {
+export function LiveCameraFeed({
+  className,
+  streamUrl = DEFAULT_STREAM_URL,
+}: LiveCameraFeedProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<FeedStatus>("connecting");
@@ -63,22 +45,18 @@ export function LiveCameraFeed({ className, whepUrl = DEFAULT_WHEP_URL }: LiveCa
   }, []);
 
   useEffect(() => {
-    let pc: RTCPeerConnection | null = null;
-    let abortController: AbortController | null = null;
+    const video = videoRef.current;
+    if (!video) {
+      return;
+    }
+
+    let hls: Hls | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let cancelled = false;
 
-    const cleanupConnection = () => {
-      if (abortController) {
-        abortController.abort();
-        abortController = null;
-      }
-      if (pc) {
-        pc.ontrack = null;
-        pc.onconnectionstatechange = null;
-        pc.close();
-        pc = null;
-      }
+    const clearVideo = () => {
+      video.removeAttribute("src");
+      video.load();
     };
 
     const scheduleReconnect = () => {
@@ -86,85 +64,88 @@ export function LiveCameraFeed({ className, whepUrl = DEFAULT_WHEP_URL }: LiveCa
         return;
       }
       setStatus("error");
-      cleanupConnection();
-      reconnectTimer = setTimeout(() => void connect(), 3000);
+      if (hls) {
+        hls.destroy();
+        hls = null;
+      }
+      clearVideo();
+      reconnectTimer = setTimeout(() => connect(), 3000);
     };
 
-    const connect = async () => {
+    const markLive = () => {
+      if (!cancelled) {
+        setStatus("live");
+      }
+    };
+
+    const connect = () => {
       if (cancelled) {
         return;
       }
 
       setStatus("connecting");
-      cleanupConnection();
+      if (hls) {
+        hls.destroy();
+        hls = null;
+      }
+      clearVideo();
 
-      try {
-        pc = new RTCPeerConnection({
-          iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+      if (Hls.isSupported()) {
+        hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
         });
-
-        pc.addTransceiver("video", { direction: "recvonly" });
-        pc.addTransceiver("audio", { direction: "recvonly" });
-
-        pc.ontrack = (event) => {
-          const [stream] = event.streams;
-          if (videoRef.current && stream) {
-            videoRef.current.srcObject = stream;
-          }
-        };
-
-        pc.onconnectionstatechange = () => {
-          if (!pc) {
+        hls.loadSource(streamUrl);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          void video.play().then(markLive).catch(() => {
+            // Autoplay can fail until metadata is ready; playing event still marks live.
+          });
+        });
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          if (!data.fatal) {
             return;
           }
-          if (pc.connectionState === "connected") {
-            setStatus("live");
-          } else if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
-            scheduleReconnect();
-          }
-        };
-
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        await waitForIceGathering(pc);
-
-        abortController = new AbortController();
-        const response = await fetch(whepUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/sdp" },
-          body: pc.localDescription?.sdp ?? offer.sdp,
-          signal: abortController.signal,
+          console.error("Live camera HLS error", data);
+          scheduleReconnect();
         });
-
-        if (!response.ok) {
-          throw new Error(`WHEP request failed with status ${response.status}`);
-        }
-
-        const answerSdp = await response.text();
-        if (cancelled || !pc) {
-          return;
-        }
-
-        await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-        console.error("Live camera feed connection failed", error);
-        scheduleReconnect();
+        return;
       }
+
+      // Safari / iOS: native HLS
+      if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = streamUrl;
+        void video.play().then(markLive).catch(() => {
+          // Rely on the playing event below.
+        });
+        return;
+      }
+
+      console.error("HLS is not supported in this browser");
+      scheduleReconnect();
     };
 
-    void connect();
+    const onPlaying = () => markLive();
+    const onError = () => scheduleReconnect();
+
+    video.addEventListener("playing", onPlaying);
+    video.addEventListener("error", onError);
+    connect();
 
     return () => {
       cancelled = true;
       if (reconnectTimer) {
         clearTimeout(reconnectTimer);
       }
-      cleanupConnection();
+      video.removeEventListener("playing", onPlaying);
+      video.removeEventListener("error", onError);
+      if (hls) {
+        hls.destroy();
+        hls = null;
+      }
+      clearVideo();
     };
-  }, [whepUrl]);
+  }, [streamUrl]);
 
   return (
     <section className={`flex min-h-0 flex-col ${className ?? ""}`} style={{ minHeight: 220 }}>
