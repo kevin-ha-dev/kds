@@ -392,7 +392,7 @@ export function AddBurgerModal({
             type="button"
             onClick={handlePrimaryAction}
             disabled={isSubmitting}
-            className="rounded-full bg-black px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
+            className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-foreground transition-colors hover:brightness-95 disabled:cursor-not-allowed disabled:bg-zinc-400 disabled:text-white disabled:hover:brightness-100"
           >
             {isSubmitting ? "Saving..." : mode === "edit" ? "Update" : "Create"}
           </button>

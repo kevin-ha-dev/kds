@@ -1,5 +1,6 @@
 "use client";
 
+import { ChefHat } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AddBurgerModal, ConfirmDeleteModal, Navbar, Receipt, Skeleton } from "@/components";
 import { parseResponseJson } from "@/lib/parse-response-json";
@@ -368,14 +369,9 @@ export default function OrdersPage() {
           setSelectedOrderId(null);
           setIsAddBurgerModalOpen(true);
         }}
-        className="fixed right-6 bottom-6 z-40 inline-flex items-center gap-2 rounded-full bg-zinc-900 px-4 py-3 text-sm font-semibold tracking-wide text-white shadow-lg transition-colors hover:bg-zinc-800 lg:right-10"
+        className="fixed right-6 bottom-6 z-40 inline-flex items-center gap-2 rounded-full bg-accent px-4 py-3 text-sm font-semibold tracking-wide text-accent-foreground shadow-lg transition-colors hover:brightness-95 lg:right-10"
       >
-        <span
-          aria-hidden
-          className="flex h-5 w-5 items-center justify-center rounded-full bg-white/12 text-[13px] leading-none"
-        >
-          +
-        </span>
+        <ChefHat className="h-4 w-4" strokeWidth={1.75} aria-hidden />
         Build Burger
       </button>
 

@@ -14,6 +14,7 @@
   --color-accent-foreground: var(--accent-foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --animate-eq: eq-bounce 0.9s ease-in-out infinite;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -71,8 +72,23 @@ body {
   background: var(--skeleton-strong);
 }
 
+@keyframes eq-bounce {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .kds-skeleton::before {
     animation: none;
+  }
+
+  .animate-eq {
+    animation: none;
+    transform: scaleY(0.7);
   }
 }

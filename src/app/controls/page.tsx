@@ -57,11 +57,11 @@ export default function ControlsPage() {
                     {isMusicOn ? "Now playing" : "Paused"}
                   </p>
                   {isMusicOn ? (
-                    <span className="kds-eq text-zinc-700" aria-hidden>
-                      <span />
-                      <span />
-                      <span />
-                      <span />
+                    <span className="inline-flex h-3.5 items-end gap-[2px]" aria-hidden>
+                      <span className="block h-3.5 w-[3px] origin-bottom animate-eq rounded-full bg-zinc-700" />
+                      <span className="block h-3.5 w-[3px] origin-bottom animate-eq rounded-full bg-zinc-700 [animation-delay:200ms]" />
+                      <span className="block h-3.5 w-[3px] origin-bottom animate-eq rounded-full bg-zinc-700 [animation-delay:400ms]" />
+                      <span className="block h-3.5 w-[3px] origin-bottom animate-eq rounded-full bg-zinc-700 [animation-delay:80ms]" />
                     </span>
                   ) : null}
                 </div>
