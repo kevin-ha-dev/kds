@@ -4,20 +4,16 @@ import { useEffect, useRef, useState } from "react";
 import { Volume1, Volume2, VolumeX } from "lucide-react";
 import { LiveCameraFeed, Navbar } from "@/components";
 
-const dances = [
-  { id: "dance-1", name: "Dance 1", description: "Routine one" },
-  { id: "dance-2", name: "Dance 2", description: "Routine two" },
-  { id: "dance-3", name: "Dance 3", description: "Routine three" },
-  { id: "dance-4", name: "Dance 4", description: "Routine four" },
-  { id: "dance-5", name: "Dance 5", description: "Routine five" },
-  { id: "dance-6", name: "Dance 6", description: "Routine six" },
+const emotes = [
+  { id: "emote-dab", name: "Dab" },
+  { id: "emote-wave", name: "Wave" },
+  { id: "emote-crab", name: "Crab" },
+  { id: "emote-heart", name: "Heart" },
 ] as const;
 
 const songs = [
-  { id: "song-1", name: "Song 1" },
-  { id: "song-2", name: "Song 2" },
-  { id: "song-3", name: "Song 3" },
-  { id: "song-4", name: "Song 4" },
+  { id: "song-1", name: "Banjo" },
+  { id: "song-2", name: "Happy Birthday" },
 ] as const;
 
 type VolumeSliderProps = {
@@ -90,7 +86,7 @@ const VolumeSlider = ({ volume, onVolumeChange }: VolumeSliderProps) => {
 
 export default function ControlsPage() {
   const [isMusicOn, setIsMusicOn] = useState(false);
-  const [activeDanceId, setActiveDanceId] = useState<string | null>(null);
+  const [activeEmoteId, setActiveEmoteId] = useState<string | null>(null);
   const [selectedSongId, setSelectedSongId] = useState<string>(songs[0].id);
   const [volume, setVolume] = useState(70);
   const [volumeBeforeMute, setVolumeBeforeMute] = useState(70);
@@ -229,30 +225,30 @@ export default function ControlsPage() {
             <div className="flex min-h-0 flex-col rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
               <div className="shrink-0">
                 <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                  Dances
+                  Emotes
                 </h2>
                 <p className="mt-1 text-sm text-zinc-600">
-                  Trigger a dance routine on the robot.
+                  Trigger an emote on the robot.
                 </p>
               </div>
 
               <div className="mt-4 grid min-h-0 flex-1 auto-rows-fr grid-cols-2 gap-3">
-                {dances.map((dance) => {
-                  const isActive = activeDanceId === dance.id;
+                {emotes.map((emote) => {
+                  const isActive = activeEmoteId === emote.id;
                   return (
                     <button
-                      key={dance.id}
+                      key={emote.id}
                       type="button"
                       aria-pressed={isActive}
                       aria-busy={isActive}
                       onClick={() =>
-                        setActiveDanceId((current) =>
-                          current === dance.id ? null : dance.id,
+                        setActiveEmoteId((current) =>
+                          current === emote.id ? null : emote.id,
                         )
                       }
                       className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-left text-sm font-semibold text-zinc-800 transition-colors hover:border-zinc-300 hover:bg-zinc-50"
                     >
-                      <span>{dance.name}</span>
+                      <span>{emote.name}</span>
                       {isActive ? (
                         <span
                           aria-hidden
