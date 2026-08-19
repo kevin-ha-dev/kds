@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Volume1, Volume2, VolumeX } from "lucide-react";
 import { LiveCameraFeed, Navbar } from "@/components";
 
 const dances = [
@@ -19,12 +20,84 @@ const songs = [
   { id: "song-4", name: "Song 4" },
 ] as const;
 
+type VolumeSliderProps = {
+  volume: number;
+  onVolumeChange: (volume: number) => void;
+};
+
+const VolumeSlider = ({ volume, onVolumeChange }: VolumeSliderProps) => {
+  const trackRef = useRef<HTMLDivElement>(null);
+
+  const setVolumeFromClientX = (clientX: number) => {
+    const track = trackRef.current;
+    if (!track) {
+      return;
+    }
+
+    const { left, width } = track.getBoundingClientRect();
+    const nextVolume = Math.round(Math.min(1, Math.max(0, (clientX - left) / width)) * 100);
+    onVolumeChange(nextVolume);
+  };
+
+  return (
+    <div
+      ref={trackRef}
+      role="slider"
+      tabIndex={0}
+      aria-label="Volume"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={volume}
+      aria-valuetext={`${volume} percent`}
+      onPointerDown={(event) => {
+        event.currentTarget.setPointerCapture(event.pointerId);
+        setVolumeFromClientX(event.clientX);
+      }}
+      onPointerMove={(event) => {
+        if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
+          return;
+        }
+
+        setVolumeFromClientX(event.clientX);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "ArrowRight" || event.key === "ArrowUp") {
+          event.preventDefault();
+          onVolumeChange(Math.min(100, volume + 5));
+          return;
+        }
+
+        if (event.key === "ArrowLeft" || event.key === "ArrowDown") {
+          event.preventDefault();
+          onVolumeChange(Math.max(0, volume - 5));
+        }
+      }}
+      className="group flex h-6 min-w-0 flex-1 cursor-pointer items-center outline-none"
+    >
+      <div className="relative h-1.5 w-full rounded-full bg-zinc-200">
+        <div
+          className="absolute inset-y-0 left-0 rounded-full bg-accent"
+          style={{ width: `${volume}%` }}
+        />
+        <div
+          className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border border-zinc-200 bg-white shadow-sm transition-transform group-active:scale-95 group-focus-visible:ring-2 group-focus-visible:ring-accent/40"
+          style={{ left: `${volume}%` }}
+        />
+      </div>
+    </div>
+  );
+};
+
 export default function ControlsPage() {
   const [isMusicOn, setIsMusicOn] = useState(false);
   const [activeDanceId, setActiveDanceId] = useState<string | null>(null);
   const [selectedSongId, setSelectedSongId] = useState<string>(songs[0].id);
+  const [volume, setVolume] = useState(70);
+  const [volumeBeforeMute, setVolumeBeforeMute] = useState(70);
 
   const selectedSong = songs.find((song) => song.id === selectedSongId) ?? songs[0];
+  const isMuted = volume === 0;
+  const VolumeIcon = isMuted ? VolumeX : volume < 40 ? Volume1 : Volume2;
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -96,7 +169,7 @@ export default function ControlsPage() {
               </button>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-dotted border-zinc-200 pt-4">
+            <div className="mt-4 flex flex-wrap items-center gap-2">
               {songs.map((song) => {
                 const isSelected = selectedSong.id === song.id;
                 return (
@@ -115,6 +188,40 @@ export default function ControlsPage() {
                   </button>
                 );
               })}
+            </div>
+
+            <div className="mt-4 flex items-center gap-3 border-t border-dotted border-zinc-200 pt-4">
+              <button
+                type="button"
+                aria-label={isMuted ? "Unmute" : "Mute"}
+                aria-pressed={isMuted}
+                onClick={() => {
+                  if (isMuted) {
+                    setVolume(volumeBeforeMute || 70);
+                    return;
+                  }
+
+                  setVolumeBeforeMute(volume);
+                  setVolume(0);
+                }}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+              >
+                <VolumeIcon className="h-4 w-4" strokeWidth={2} aria-hidden />
+              </button>
+
+              <VolumeSlider
+                volume={volume}
+                onVolumeChange={(nextVolume) => {
+                  setVolume(nextVolume);
+                  if (nextVolume > 0) {
+                    setVolumeBeforeMute(nextVolume);
+                  }
+                }}
+              />
+
+              <span className="w-8 shrink-0 text-right text-[11px] font-semibold tabular-nums tracking-tight text-zinc-500">
+                {volume}
+              </span>
             </div>
           </div>
 
