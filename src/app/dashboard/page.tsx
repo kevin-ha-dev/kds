@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import {
   BurgersSoldChart,
   InventoryLevelsChart,
-  LiveCameraFeed,
   Navbar,
   Skeleton,
 } from "@/components";
@@ -143,33 +142,37 @@ export default function DashboardPage() {
           <Navbar />
         </div>
 
-        <section className="mt-4 grid grid-cols-1 gap-3 border-b border-dotted border-zinc-300 pb-4 md:grid-cols-[1fr_auto] md:items-end">
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Dashboard</h1>
-          <div className="justify-self-start md:justify-self-end">
-            <label htmlFor="dashboard-timeframe" className="sr-only">
-              Select dashboard timeframe
-            </label>
-            <select
-              id="dashboard-timeframe"
-              value={selectedTimeframe}
-              onChange={(event) =>
-                setSelectedTimeframe(event.target.value as (typeof timeframeOptions)[number])
-              }
-              className="h-9 min-w-36 rounded-md border border-zinc-300 bg-white px-3 text-sm font-medium text-zinc-700 shadow-sm outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
-            >
-              {timeframeOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </div>
-        </section>
-
         <section className="mt-6 grid min-h-0 flex-1 grid-rows-[minmax(0,1.15fr)_minmax(0,1fr)] gap-5 overflow-hidden pb-6">
-          <div className="grid min-h-0 grid-cols-1 gap-5 lg:grid-cols-2">
+          <div className="grid min-h-0 grid-cols-1 gap-5">
             <div className="flex min-h-0 flex-col">
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white px-4 py-3 shadow-sm md:px-6 md:py-4">
+                <div className="mb-3 flex shrink-0 items-center justify-between gap-3 border-b border-dotted border-zinc-300 pb-3">
+                  <h2 className="text-sm font-semibold tracking-tight text-zinc-900">
+                    Completed Orders
+                  </h2>
+                  <div>
+                    <label htmlFor="dashboard-timeframe" className="sr-only">
+                      Select dashboard timeframe
+                    </label>
+                    <select
+                      id="dashboard-timeframe"
+                      value={selectedTimeframe}
+                      onChange={(event) =>
+                        setSelectedTimeframe(
+                          event.target.value as (typeof timeframeOptions)[number],
+                        )
+                      }
+                      className="h-9 min-w-36 rounded-md border border-zinc-300 bg-white px-3 text-sm font-medium text-zinc-700 shadow-sm outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+                    >
+                      {timeframeOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
                 <div className={`shrink-0 ${COMPLETED_TABLE_HEADER_GRID_CLASS}`}>
                   {isLoading ? (
                     <>
@@ -212,8 +215,6 @@ export default function DashboardPage() {
                 </ul>
               </div>
             </div>
-
-            <LiveCameraFeed className="min-h-0" />
           </div>
 
           <div className="grid min-h-0 grid-cols-1 gap-5 lg:grid-cols-2">

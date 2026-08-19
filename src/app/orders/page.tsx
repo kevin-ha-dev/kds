@@ -334,7 +334,7 @@ export default function OrdersPage() {
           aria-hidden
           className="pointer-events-none fixed right-16 bottom-24 z-30 flex flex-col items-start lg:right-20"
         >
-          <span className="mb-1 -translate-x-24 translate-y-6 font-mono text-sm font-medium tracking-wide text-amber-500">
+          <span className="mb-1 -translate-x-24 translate-y-6 font-mono text-sm font-medium tracking-wide text-accent">
             Start here
           </span>
           <svg
@@ -342,7 +342,7 @@ export default function OrdersPage() {
             height="100"
             viewBox="0 0 80 100"
             fill="none"
-            className="-translate-x-[72px] translate-y-6 text-amber-500"
+            className="-translate-x-18 translate-y-6 text-accent"
           >
             <path
               d="M20 6C8 40 40 60 64 84"

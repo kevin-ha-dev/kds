@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 const navItems = [
   { label: "Orders", href: "/orders" },
   { label: "Dashboard", href: "/dashboard" },
+  { label: "Controls", href: "/controls" },
 ] as const;
 
 export function Navbar() {
