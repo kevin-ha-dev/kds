@@ -19,11 +19,13 @@ type AddBurgerModalProps = {
 };
 
 const burgerTypes = [
-  "Classic Burger",
-  "Cheese Burger",
-  "Double Burger",
-  "Veggie Burger",
-  "Bacon Burger",
+  "The Burger",
+  "Bae Burger",
+  "Fried Chicken Burger",
+  "Banh Mi Burger",
+  "Impossible Burger",
+  "Lemongrass Tofu Burger",
+  "Test Burger",
 ] as const;
 
 const ingredients = [
@@ -34,6 +36,29 @@ const ingredients = [
   "Gochujang",
   "Garlic Aioli",
 ] as const;
+
+type BurgerType = (typeof burgerTypes)[number];
+type Ingredient = (typeof ingredients)[number];
+
+/** Per-burger ingredient overrides; anything not listed starts at "normal". */
+const burgerIngredientPresets: Partial<
+  Record<BurgerType, Partial<Record<Ingredient, IngredientAmount>>>
+> = {
+  "The Burger": { Gochujang: "none" },
+  "Bae Burger": { Gochujang: "none" },
+  "Fried Chicken Burger": { "Garlic Aioli": "none" },
+  "Banh Mi Burger": { Gochujang: "none", Tomatoes: "none", Pickles: "none" },
+  "Impossible Burger": { Gochujang: "none" },
+  "Lemongrass Tofu Burger": { Gochujang: "none" },
+  "Test Burger": {},
+};
+
+function createPresetIngredientAmounts(type: string): Record<string, IngredientAmount> {
+  return {
+    ...createDefaultIngredientAmounts(ingredients),
+    ...burgerIngredientPresets[type as BurgerType],
+  };
+}
 
 const amountLabels: Record<IngredientAmount, string> = {
   none: "None",
@@ -94,7 +119,7 @@ export function AddBurgerModal({
 }: AddBurgerModalProps) {
   const [burgerType, setBurgerType] = useState<string>(burgerTypes[0]);
   const [ingredientAmounts, setIngredientAmounts] = useState<Record<string, IngredientAmount>>(
-    () => createDefaultIngredientAmounts(ingredients),
+    () => createPresetIngredientAmounts(burgerTypes[0]),
   );
   const [trayNumberInput, setTrayNumberInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -133,7 +158,7 @@ export function AddBurgerModal({
     }
 
     setBurgerType(burgerTypes[0]);
-    setIngredientAmounts(createDefaultIngredientAmounts(ingredients));
+    setIngredientAmounts(createPresetIngredientAmounts(burgerTypes[0]));
     setTrayNumberInput("");
   }, [initialValues, isOpen]);
 
@@ -322,7 +347,11 @@ export function AddBurgerModal({
             <select
               id="burger-type"
               value={burgerType}
-              onChange={(event) => setBurgerType(event.target.value)}
+              onChange={(event) => {
+                const nextType = event.target.value;
+                setBurgerType(nextType);
+                setIngredientAmounts(createPresetIngredientAmounts(nextType));
+              }}
               className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors focus:border-zinc-500"
             >
               {burgerTypes.map((type) => (
@@ -336,7 +365,7 @@ export function AddBurgerModal({
           <section>
             <p className="mb-2 text-sm font-semibold text-zinc-800">Ingredients</p>
             <div className="rounded-lg border border-zinc-200">
-              <div className="divide-y divide-zinc-100">
+              <div key={burgerType} className="divide-y divide-zinc-100">
                 {ingredients.map((ingredient) => (
                   <div
                     key={ingredient}
