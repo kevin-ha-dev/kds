@@ -135,7 +135,7 @@ const CompletedRowSkeleton = () => (
       <Skeleton className="h-3.5 w-28" tone="strong" />
     </td>
     <td className="py-3 pr-4">
-      <Skeleton className="ml-auto h-3.5 w-6" />
+      <Skeleton className="h-3.5 w-6" />
     </td>
     <td className="py-3">
       <Skeleton className="ml-auto h-3.5 w-14" tone="soft" />
@@ -337,7 +337,7 @@ export default function DashboardPage() {
                   <thead className="sticky top-0 bg-white">
                     <tr className="border-b border-zinc-200 text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
                       <th className="pb-3 pr-4 text-left font-semibold">Burger</th>
-                      <th className="pb-3 pr-4 text-right font-semibold">Table</th>
+                      <th className="pb-3 pr-4 text-left font-semibold">Table</th>
                       <th className="pb-3 text-right font-semibold">Time</th>
                     </tr>
                   </thead>
@@ -356,7 +356,7 @@ export default function DashboardPage() {
                           <td className="overflow-hidden py-3 pr-4 font-medium tracking-tight text-ellipsis whitespace-nowrap text-zinc-900">
                             {order.item}
                           </td>
-                          <td className="py-3 pr-4 text-right tabular-nums text-zinc-700">
+                          <td className="py-3 pr-4 text-left tabular-nums text-zinc-700">
                             {order.trayNumber}
                           </td>
                           <td className="py-3 whitespace-nowrap text-right tabular-nums text-zinc-500">

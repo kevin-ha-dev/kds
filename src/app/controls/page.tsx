@@ -2,19 +2,39 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Volume1, Volume2, VolumeX } from "lucide-react";
-import { LiveCameraFeed, Navbar } from "@/components";
+import { LiveCameraFeed, Navbar, Skeleton } from "@/components";
+import { emotes, type Emote } from "@/lib/emotes";
+import { parseResponseJson } from "@/lib/parse-response-json";
+import { isSongId, songs } from "@/lib/songs";
+import { getBrowserSupabaseClient } from "@/lib/supabase/client";
+import type {
+  ControlState,
+  ControlStateResponse,
+  DbControlState,
+  SendDanceResponse,
+  UpdateControlStateRequestBody,
+} from "@/types/control";
 
-const emotes = [
-  { id: "emote-dab", name: "Dab" },
-  { id: "emote-wave", name: "Wave" },
-  { id: "emote-crab", name: "Crab" },
-  { id: "emote-heart", name: "Heart" },
-] as const;
+const VOLUME_WRITE_DELAY_MS = 300;
 
-const songs = [
-  { id: "song-1", name: "Banjo" },
-  { id: "song-2", name: "Happy Birthday" },
-] as const;
+async function patchControlState(patch: UpdateControlStateRequestBody) {
+  try {
+    const response = await fetch("/api/controls/state", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(patch),
+    });
+
+    const data = await parseResponseJson<ControlStateResponse>(response);
+    if (!response.ok || !data?.success) {
+      throw new Error(data?.error ?? "Failed to update control state.");
+    }
+  } catch (error) {
+    console.error("Update control state failed", error);
+  }
+}
 
 type VolumeSliderProps = {
   volume: number;
@@ -86,14 +106,70 @@ const VolumeSlider = ({ volume, onVolumeChange }: VolumeSliderProps) => {
 
 export default function ControlsPage() {
   const [isMusicOn, setIsMusicOn] = useState(false);
-  const [activeEmoteId, setActiveEmoteId] = useState<string | null>(null);
+  const [isControlStateLoaded, setIsControlStateLoaded] = useState(false);
+  const [pendingEmoteId, setPendingEmoteId] = useState<string | null>(null);
   const [selectedSongId, setSelectedSongId] = useState<string>(songs[0].id);
   const [volume, setVolume] = useState(70);
   const [volumeBeforeMute, setVolumeBeforeMute] = useState(70);
+  const volumeWriteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const selectedSong = songs.find((song) => song.id === selectedSongId) ?? songs[0];
   const isMuted = volume === 0;
   const VolumeIcon = isMuted ? VolumeX : volume < 40 ? Volume1 : Volume2;
+
+  const applyVolume = (nextVolume: number) => {
+    setVolume(nextVolume);
+    if (nextVolume > 0) {
+      setVolumeBeforeMute(nextVolume);
+    }
+
+    if (volumeWriteTimeoutRef.current) {
+      clearTimeout(volumeWriteTimeoutRef.current);
+    }
+
+    volumeWriteTimeoutRef.current = setTimeout(() => {
+      volumeWriteTimeoutRef.current = null;
+      void patchControlState({ volume: nextVolume });
+    }, VOLUME_WRITE_DELAY_MS);
+  };
+
+  const toggleMusic = () => {
+    const nextMusicEnabled = !isMusicOn;
+    setIsMusicOn(nextMusicEnabled);
+    void patchControlState({ musicEnabled: nextMusicEnabled });
+  };
+
+  const selectSong = (songId: string) => {
+    setSelectedSongId(songId);
+    void patchControlState({ currentSong: songId });
+  };
+
+  const handleEmoteClick = async (emote: Emote) => {
+    if (pendingEmoteId) {
+      return;
+    }
+
+    setPendingEmoteId(emote.id);
+
+    try {
+      const response = await fetch("/api/controls/dance", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ command: emote.command }),
+      });
+
+      const data = await parseResponseJson<SendDanceResponse>(response);
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error ?? "Failed to send dance command.");
+      }
+    } catch (error) {
+      console.error("Send dance command failed", error);
+    } finally {
+      setPendingEmoteId(null);
+    }
+  };
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -101,6 +177,75 @@ export default function ControlsPage() {
 
     return () => {
       document.body.style.overflow = previousOverflow;
+
+      if (volumeWriteTimeoutRef.current) {
+        clearTimeout(volumeWriteTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const applyState = (state: ControlState) => {
+      setIsMusicOn(state.musicEnabled);
+
+      if (state.currentSong && isSongId(state.currentSong)) {
+        setSelectedSongId(state.currentSong);
+      }
+
+      // A pending local write means the user is still dragging; keep the slider where they put it.
+      if (volumeWriteTimeoutRef.current === null) {
+        setVolume(state.volume);
+        if (state.volume > 0) {
+          setVolumeBeforeMute(state.volume);
+        }
+      }
+    };
+
+    const loadControlState = async () => {
+      try {
+        const response = await fetch("/api/controls/state", {
+          method: "POST",
+        });
+
+        const data = await parseResponseJson<ControlStateResponse>(response);
+        if (!response.ok || !data?.success || !data.state) {
+          throw new Error(data?.error ?? "Failed to load control state.");
+        }
+
+        applyState(data.state);
+      } catch (error) {
+        console.error("Load control state failed", error);
+      } finally {
+        setIsControlStateLoaded(true);
+      }
+    };
+
+    void loadControlState();
+
+    const { client, error } = getBrowserSupabaseClient();
+    if (!client) {
+      console.error("Control state realtime unavailable", error);
+      return;
+    }
+
+    const channel = client
+      .channel("control-state-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "control_state" },
+        (payload) => {
+          const row = payload.new as DbControlState;
+          applyState({
+            musicEnabled: row.music_enabled,
+            currentSong: row.current_song,
+            volume: row.volume,
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void client.removeChannel(channel);
     };
   }, []);
 
@@ -122,10 +267,14 @@ export default function ControlsPage() {
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                    {isMusicOn ? "Now playing" : "Paused"}
-                  </p>
-                  {isMusicOn ? (
+                  {isControlStateLoaded ? (
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                      {isMusicOn ? "Now playing" : "Paused"}
+                    </p>
+                  ) : (
+                    <Skeleton className="h-3 w-20" tone="soft" />
+                  )}
+                  {isControlStateLoaded && isMusicOn ? (
                     <span className="inline-flex h-3.5 items-end gap-[2px]" aria-hidden>
                       <span className="block h-3.5 w-[3px] origin-bottom animate-eq rounded-full bg-zinc-700" />
                       <span className="block h-3.5 w-[3px] origin-bottom animate-eq rounded-full bg-zinc-700 [animation-delay:200ms]" />
@@ -134,17 +283,22 @@ export default function ControlsPage() {
                     </span>
                   ) : null}
                 </div>
-                <p className="mt-0.5 truncate text-base font-semibold text-zinc-900">
-                  {selectedSong.name}
-                </p>
+                {isControlStateLoaded ? (
+                  <p className="mt-0.5 truncate text-base font-semibold text-zinc-900">
+                    {selectedSong.name}
+                  </p>
+                ) : (
+                  <Skeleton className="mt-1 h-5 w-36" tone="strong" />
+                )}
               </div>
 
               <button
                 type="button"
                 aria-pressed={isMusicOn}
                 aria-label={isMusicOn ? "Pause music" : "Play music"}
-                onClick={() => setIsMusicOn((on) => !on)}
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-sm transition-transform hover:scale-105 active:scale-95"
+                disabled={!isControlStateLoaded}
+                onClick={toggleMusic}
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-sm transition-transform hover:scale-105 active:scale-95 disabled:opacity-50"
               >
                 {isMusicOn ? (
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -167,14 +321,15 @@ export default function ControlsPage() {
 
             <div className="mt-4 flex flex-wrap items-center gap-2">
               {songs.map((song) => {
-                const isSelected = selectedSong.id === song.id;
+                const isSelected = isControlStateLoaded && selectedSong.id === song.id;
                 return (
                   <button
                     key={song.id}
                     type="button"
                     aria-pressed={isSelected}
-                    onClick={() => setSelectedSongId(song.id)}
-                    className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                    disabled={!isControlStateLoaded}
+                    onClick={() => selectSong(song.id)}
+                    className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${
                       isSelected
                         ? "border-zinc-400 bg-zinc-100 text-zinc-900"
                         : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50"
@@ -191,33 +346,35 @@ export default function ControlsPage() {
                 type="button"
                 aria-label={isMuted ? "Unmute" : "Mute"}
                 aria-pressed={isMuted}
+                disabled={!isControlStateLoaded}
                 onClick={() => {
                   if (isMuted) {
-                    setVolume(volumeBeforeMute || 70);
+                    applyVolume(volumeBeforeMute || 70);
                     return;
                   }
 
                   setVolumeBeforeMute(volume);
-                  setVolume(0);
+                  applyVolume(0);
                 }}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 disabled:opacity-50"
               >
                 <VolumeIcon className="h-4 w-4" strokeWidth={2} aria-hidden />
               </button>
 
-              <VolumeSlider
-                volume={volume}
-                onVolumeChange={(nextVolume) => {
-                  setVolume(nextVolume);
-                  if (nextVolume > 0) {
-                    setVolumeBeforeMute(nextVolume);
-                  }
-                }}
-              />
+              {isControlStateLoaded ? (
+                <>
+                  <VolumeSlider volume={volume} onVolumeChange={applyVolume} />
 
-              <span className="w-8 shrink-0 text-right text-[11px] font-semibold tabular-nums tracking-tight text-zinc-500">
-                {volume}
-              </span>
+                  <span className="w-8 shrink-0 text-right text-[11px] font-semibold tabular-nums tracking-tight text-zinc-500">
+                    {volume}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Skeleton className="h-1.5 min-w-0 flex-1 rounded-full" />
+                  <Skeleton className="h-3 w-8 shrink-0" tone="soft" />
+                </>
+              )}
             </div>
           </div>
 
@@ -234,22 +391,18 @@ export default function ControlsPage() {
 
               <div className="mt-4 grid min-h-0 flex-1 auto-rows-fr grid-cols-2 gap-3">
                 {emotes.map((emote) => {
-                  const isActive = activeEmoteId === emote.id;
+                  const isPending = pendingEmoteId === emote.id;
                   return (
                     <button
                       key={emote.id}
                       type="button"
-                      aria-pressed={isActive}
-                      aria-busy={isActive}
-                      onClick={() =>
-                        setActiveEmoteId((current) =>
-                          current === emote.id ? null : emote.id,
-                        )
-                      }
-                      className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-left text-sm font-semibold text-zinc-800 transition-colors hover:border-zinc-300 hover:bg-zinc-50"
+                      aria-busy={isPending}
+                      disabled={pendingEmoteId !== null}
+                      onClick={() => void handleEmoteClick(emote)}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-left text-sm font-semibold text-zinc-800 transition-colors hover:border-zinc-300 hover:bg-zinc-50 disabled:opacity-50"
                     >
                       <span>{emote.name}</span>
-                      {isActive ? (
+                      {isPending ? (
                         <span
                           aria-hidden
                           className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-800"
