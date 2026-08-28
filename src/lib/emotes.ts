@@ -1,8 +1,8 @@
 export const emotes = [
-  { id: "emote-dab", name: "Dab", command: "dance_1" },
-  { id: "emote-wave", name: "Wave", command: "dance_2" },
-  { id: "emote-crab", name: "Crab", command: "dance_3" },
-  { id: "emote-heart", name: "Heart", command: "dance_4" },
+  { id: "emote-dab", name: "Dab", command: "DANCE:1" },
+  { id: "emote-wave", name: "Wave", command: "DANCE:2" },
+  { id: "emote-crab", name: "Crab", command: "DANCE:3" },
+  { id: "emote-heart", name: "Heart", command: "DANCE:4" },
 ] as const;
 
 export type Emote = (typeof emotes)[number];

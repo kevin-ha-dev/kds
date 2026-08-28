@@ -1,6 +1,6 @@
 export const songs = [
-  { id: "song_1", name: "Banjo" },
-  { id: "song_2", name: "Happy Birthday" },
+  { id: "SONG:1", name: "Banjo" },
+  { id: "SONG:2", name: "Happy Birthday" },
 ] as const;
 
 export type Song = (typeof songs)[number];
