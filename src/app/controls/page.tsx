@@ -256,7 +256,7 @@ export default function ControlsPage() {
           <Navbar />
         </div>
 
-        <section className="mt-6 grid min-h-0 flex-1 grid-cols-1 gap-5 overflow-hidden pb-6 lg:grid-cols-2 lg:grid-rows-[auto_minmax(0,1fr)]">
+        <section className="mt-6 flex min-h-0 flex-1 flex-col gap-5 overflow-hidden pb-6 lg:grid lg:grid-cols-2 lg:grid-rows-[auto_minmax(0,1fr)]">
           <div className="order-3 shrink-0 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm lg:order-1 lg:col-span-2">
             <div className="flex items-center gap-4">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md bg-linear-to-br from-zinc-800 to-zinc-600 text-white shadow-inner">
@@ -378,7 +378,7 @@ export default function ControlsPage() {
             </div>
           </div>
 
-          <div className="order-2 flex min-h-0 flex-col rounded-xl border border-zinc-200 bg-white p-5 shadow-sm lg:order-2">
+          <div className="order-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white p-5 shadow-sm lg:order-2 lg:flex-none">
             <div className="shrink-0">
               <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
                 Emotes
@@ -413,7 +413,7 @@ export default function ControlsPage() {
             </div>
           </div>
 
-          <LiveCameraFeed className="order-1 min-h-0 lg:order-3" />
+          <LiveCameraFeed className="order-1 min-h-0 flex-1 lg:order-3 lg:flex-none" />
         </section>
       </div>
     </main>

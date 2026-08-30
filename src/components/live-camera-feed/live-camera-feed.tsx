@@ -148,7 +148,7 @@ export function LiveCameraFeed({
   }, [streamUrl]);
 
   return (
-    <section className={`flex min-h-0 flex-col ${className ?? ""}`} style={{ minHeight: 220 }}>
+    <section className={`flex min-h-0 flex-col ${className ?? ""}`}>
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
         <div
           ref={containerRef}
