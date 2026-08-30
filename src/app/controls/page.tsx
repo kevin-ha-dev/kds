@@ -256,8 +256,8 @@ export default function ControlsPage() {
           <Navbar />
         </div>
 
-        <section className="mt-6 flex min-h-0 flex-1 flex-col gap-5 overflow-hidden pb-6">
-          <div className="shrink-0 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+        <section className="mt-6 grid min-h-0 flex-1 grid-cols-1 gap-5 overflow-hidden pb-6 lg:grid-cols-2 lg:grid-rows-[auto_minmax(0,1fr)]">
+          <div className="order-3 shrink-0 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm lg:order-1 lg:col-span-2">
             <div className="flex items-center gap-4">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md bg-linear-to-br from-zinc-800 to-zinc-600 text-white shadow-inner">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -378,44 +378,42 @@ export default function ControlsPage() {
             </div>
           </div>
 
-          <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 lg:grid-cols-2">
-            <div className="flex min-h-0 flex-col rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-              <div className="shrink-0">
-                <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                  Emotes
-                </h2>
-                <p className="mt-1 text-sm text-zinc-600">
-                  Trigger an emote on the robot.
-                </p>
-              </div>
-
-              <div className="mt-4 grid min-h-0 flex-1 auto-rows-fr grid-cols-2 gap-3">
-                {emotes.map((emote) => {
-                  const isPending = pendingEmoteId === emote.id;
-                  return (
-                    <button
-                      key={emote.id}
-                      type="button"
-                      aria-busy={isPending}
-                      disabled={pendingEmoteId !== null}
-                      onClick={() => void handleEmoteClick(emote)}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-left text-sm font-semibold text-zinc-800 transition-colors hover:border-zinc-300 hover:bg-zinc-50 disabled:opacity-50"
-                    >
-                      <span>{emote.name}</span>
-                      {isPending ? (
-                        <span
-                          aria-hidden
-                          className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-800"
-                        />
-                      ) : null}
-                    </button>
-                  );
-                })}
-              </div>
+          <div className="order-2 flex min-h-0 flex-col rounded-xl border border-zinc-200 bg-white p-5 shadow-sm lg:order-2">
+            <div className="shrink-0">
+              <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                Emotes
+              </h2>
+              <p className="mt-1 text-sm text-zinc-600">
+                Trigger an emote on the robot.
+              </p>
             </div>
 
-            <LiveCameraFeed className="min-h-0" />
+            <div className="mt-4 grid min-h-0 flex-1 auto-rows-fr grid-cols-2 gap-3">
+              {emotes.map((emote) => {
+                const isPending = pendingEmoteId === emote.id;
+                return (
+                  <button
+                    key={emote.id}
+                    type="button"
+                    aria-busy={isPending}
+                    disabled={pendingEmoteId !== null}
+                    onClick={() => void handleEmoteClick(emote)}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-left text-sm font-semibold text-zinc-800 transition-colors hover:border-zinc-300 hover:bg-zinc-50 disabled:opacity-50"
+                  >
+                    <span>{emote.name}</span>
+                    {isPending ? (
+                      <span
+                        aria-hidden
+                        className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-800"
+                      />
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
           </div>
+
+          <LiveCameraFeed className="order-1 min-h-0 lg:order-3" />
         </section>
       </div>
     </main>
