@@ -3,6 +3,12 @@
 import { ChefHat } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AddBurgerModal, ConfirmDeleteModal, Navbar, Receipt, Skeleton } from "@/components";
+import {
+  DEFAULT_CHEESE,
+  parseSelectedCheese,
+  withCheeseIngredient,
+  type CheeseOption,
+} from "@/lib/ingredients";
 import { parseResponseJson } from "@/lib/parse-response-json";
 import { getBrowserSupabaseClient } from "@/lib/supabase/client";
 import type {
@@ -15,6 +21,69 @@ import type {
 } from "@/types/order";
 
 const initialOrders: Order[] = [];
+
+const ORDER_CHEESE_STORAGE_KEY = "kds-order-cheese";
+
+type StoredCheeseMap = Record<string, CheeseOption | null>;
+
+function readStoredCheeseMap(): StoredCheeseMap {
+  if (typeof window === "undefined") {
+    return {};
+  }
+
+  try {
+    const raw = window.sessionStorage.getItem(ORDER_CHEESE_STORAGE_KEY);
+    if (!raw) {
+      return {};
+    }
+    const parsed = JSON.parse(raw) as StoredCheeseMap;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeStoredCheese(orderId: string, cheese: CheeseOption | null) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const next = { ...readStoredCheeseMap(), [orderId]: cheese };
+  window.sessionStorage.setItem(ORDER_CHEESE_STORAGE_KEY, JSON.stringify(next));
+}
+
+function clearStoredCheese(orderId: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const next = { ...readStoredCheeseMap() };
+  delete next[orderId];
+  window.sessionStorage.setItem(ORDER_CHEESE_STORAGE_KEY, JSON.stringify(next));
+}
+
+function resolveOrderCheese(
+  orderId: string,
+  ingredients: readonly string[],
+  previousIngredients?: readonly string[],
+): CheeseOption | null {
+  const fromIngredients = parseSelectedCheese(ingredients);
+  if (fromIngredients) {
+    return fromIngredients;
+  }
+
+  // Keep whatever the ticket already showed locally across realtime refreshes.
+  if (previousIngredients !== undefined) {
+    return parseSelectedCheese(previousIngredients);
+  }
+
+  const stored = readStoredCheeseMap();
+  if (Object.prototype.hasOwnProperty.call(stored, orderId)) {
+    return stored[orderId] ?? null;
+  }
+
+  return DEFAULT_CHEESE;
+}
 
 /** Active tickets stay in queue order: oldest at the front, newest at the back. */
 const sortOrdersAsQueue = (orders: Order[]) =>
@@ -87,7 +156,32 @@ export default function OrdersPage() {
       throw new Error(data.error ?? "Failed to load active orders.");
     }
 
-    setOrders(sortOrdersAsQueue(data.orders ?? []));
+    setOrders((currentOrders) => {
+      const tableNumberById = new Map(
+        currentOrders
+          .filter((order) => order.tableNumber != null)
+          .map((order) => [order.id, order.tableNumber]),
+      );
+      const previousIngredientsById = new Map(
+        currentOrders.map((order) => [order.id, order.ingredients]),
+      );
+
+      return sortOrdersAsQueue(
+        (data.orders ?? []).map((order) => {
+          const cheese = resolveOrderCheese(
+            order.id,
+            order.ingredients,
+            previousIngredientsById.get(order.id),
+          );
+
+          return {
+            ...order,
+            tableNumber: order.tableNumber ?? tableNumberById.get(order.id),
+            ingredients: withCheeseIngredient(order.ingredients, cheese),
+          };
+        }),
+      );
+    });
   };
 
   const closeModal = () => {
@@ -206,9 +300,11 @@ export default function OrdersPage() {
       ingredients: values.ingredients,
       ingredientAmounts: values.ingredientAmounts ?? {},
       trayNumber: values.trayNumber,
+      tableNumber: values.tableNumber,
     };
 
     const { orderId, trayNumber } = await handleCreateBurger(payload);
+    writeStoredCheese(orderId, parseSelectedCheese(values.ingredients));
 
     setOrders((currentOrders) =>
       sortOrdersAsQueue([
@@ -216,9 +312,13 @@ export default function OrdersPage() {
         {
           id: orderId,
           trayNumber,
+          tableNumber: values.tableNumber,
           item: payload.burgerType,
           status: "pending",
-          ingredients: payload.ingredients,
+          ingredients: withCheeseIngredient(
+            payload.ingredients,
+            parseSelectedCheese(values.ingredients),
+          ),
           ingredientAmounts: payload.ingredientAmounts,
           createdAt: new Date().toISOString(),
         },
@@ -239,6 +339,7 @@ export default function OrdersPage() {
       body: JSON.stringify({
         orderId: selectedOrderId,
         trayNumber: values.trayNumber,
+        tableNumber: values.tableNumber,
         burgerType: values.item,
         ingredientAmounts: values.ingredientAmounts ?? {},
       }),
@@ -249,14 +350,18 @@ export default function OrdersPage() {
       throw new Error(data.error ?? "Failed to update order.");
     }
 
+    const selectedCheese = parseSelectedCheese(values.ingredients);
+    writeStoredCheese(selectedOrderId, selectedCheese);
+
     setOrders((currentOrders) =>
       currentOrders.map((order) =>
         order.id === selectedOrderId
           ? {
               ...order,
               trayNumber: values.trayNumber,
+              tableNumber: values.tableNumber,
               item: values.item,
-              ingredients: values.ingredients,
+              ingredients: withCheeseIngredient(values.ingredients, selectedCheese),
               ingredientAmounts: values.ingredientAmounts,
             }
           : order,
@@ -283,6 +388,7 @@ export default function OrdersPage() {
       throw new Error(data.error ?? "Failed to delete order.");
     }
 
+    clearStoredCheese(orderId);
     setOrders((currentOrders) => currentOrders.filter((order) => order.id !== orderId));
   };
 
@@ -315,6 +421,7 @@ export default function OrdersPage() {
                   key={order.id}
                   orderId={order.id}
                   trayNumber={order.trayNumber}
+                  tableNumber={order.tableNumber}
                   item={order.item}
                   ingredients={order.ingredients}
                   onEdit={(orderId) => {
@@ -383,6 +490,7 @@ export default function OrdersPage() {
             ? {
                 id: selectedOrder.id,
                 trayNumber: selectedOrder.trayNumber,
+                tableNumber: selectedOrder.tableNumber,
                 item: selectedOrder.item,
                 ingredients: selectedOrder.ingredients,
                 ingredientAmounts: selectedOrder.ingredientAmounts,

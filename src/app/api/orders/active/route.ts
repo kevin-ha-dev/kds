@@ -18,7 +18,7 @@ export async function POST() {
     // Queue order: oldest first, newest at the back.
     const { data: orders, error: ordersError } = await supabase
       .from("orders")
-      .select("id, status, burger_name, tray_number, created_at")
+      .select("id, status, burger_name, tray_number, table_number, created_at")
       .in("status", ["pending", "running"])
       .order("created_at", { ascending: true })
       .order("id", { ascending: true });
@@ -92,6 +92,10 @@ export async function POST() {
           order.tray_number != null && Number.isFinite(Number(order.tray_number))
             ? Number(order.tray_number)
             : 0,
+        tableNumber:
+          order.table_number != null && Number.isFinite(Number(order.table_number))
+            ? Number(order.table_number)
+            : undefined,
         item: order.burger_name?.trim() || "Custom Burger",
         status: order.status,
         ingredients: ingredientAmountsToDisplayList(ingredientAmounts),

@@ -2,10 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  CHEESE_OPTIONS,
   createDefaultIngredientAmounts,
+  DEFAULT_CHEESE,
   INGREDIENT_AMOUNT_OPTIONS,
   ingredientAmountsToDisplayList,
   parseIngredientDisplayList,
+  parseSelectedCheese,
+  withCheeseIngredient,
+  type CheeseOption,
 } from "@/lib/ingredients";
 import type { BurgerFormValues, IngredientAmount } from "@/types/order";
 
@@ -109,6 +114,29 @@ function IngredientAmountControl({
   );
 }
 
+type CheeseOptionControlProps = {
+  cheese: CheeseOption;
+  selected: boolean;
+  onToggle: (cheese: CheeseOption) => void;
+};
+
+function CheeseOptionControl({ cheese, selected, onToggle }: CheeseOptionControlProps) {
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(cheese)}
+      aria-pressed={selected}
+      className={`flex h-7 cursor-pointer items-center justify-center rounded-sm px-1 transition-colors ${
+        selected
+          ? "bg-zinc-100 text-zinc-800"
+          : "text-zinc-400 hover:text-zinc-600"
+      }`}
+    >
+      <span className="text-[10px] font-medium tracking-wide">{cheese}</span>
+    </button>
+  );
+}
+
 export function AddBurgerModal({
   isOpen,
   onClose,
@@ -121,7 +149,9 @@ export function AddBurgerModal({
   const [ingredientAmounts, setIngredientAmounts] = useState<Record<string, IngredientAmount>>(
     () => createPresetIngredientAmounts(burgerTypes[0]),
   );
+  const [selectedCheese, setSelectedCheese] = useState<CheeseOption | null>(DEFAULT_CHEESE);
   const [trayNumberInput, setTrayNumberInput] = useState("");
+  const [tableNumberInput, setTableNumberInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const openSessionRef = useRef<string | null>(null);
   const isSubmittingRef = useRef(false);
@@ -153,13 +183,19 @@ export function AddBurgerModal({
         ...(initialValues.ingredientAmounts ??
           parseIngredientDisplayList(initialValues.ingredients, ingredients)),
       });
+      setSelectedCheese(parseSelectedCheese(initialValues.ingredients));
       setTrayNumberInput(String(initialValues.trayNumber));
+      setTableNumberInput(
+        initialValues.tableNumber != null ? String(initialValues.tableNumber) : "",
+      );
       return;
     }
 
     setBurgerType(burgerTypes[0]);
     setIngredientAmounts(createPresetIngredientAmounts(burgerTypes[0]));
+    setSelectedCheese(DEFAULT_CHEESE);
     setTrayNumberInput("");
+    setTableNumberInput("");
   }, [initialValues, isOpen]);
 
   // Auto-focus tray # and capture USB scanner digits while the modal is open.
@@ -196,7 +232,9 @@ export function AddBurgerModal({
         scanBufferRef.current = "";
         lastScanDigitAtRef.current = 0;
         scanBurstEndTimerRef.current = null;
-        trayInputRef.current?.select();
+        if (document.activeElement?.id !== "table-number") {
+          trayInputRef.current?.select();
+        }
       }, SCAN_BURST_GAP_MS);
     };
 
@@ -206,8 +244,11 @@ export function AddBurgerModal({
       scheduleBurstEnd();
     };
 
+    const isTableNumberField = (event: KeyboardEvent) =>
+      event.target instanceof HTMLElement && event.target.id === "table-number";
+
     const onKeyDown = (event: KeyboardEvent) => {
-      if (isSubmittingRef.current) {
+      if (isSubmittingRef.current || isTableNumberField(event)) {
         return;
       }
 
@@ -279,6 +320,10 @@ export function AddBurgerModal({
     }));
   };
 
+  const toggleCheese = (cheese: CheeseOption) => {
+    setSelectedCheese((current) => (current === cheese ? null : cheese));
+  };
+
   const parsedTrayNumber = Number.parseInt(trayNumberInput.trim(), 10);
 
   const handlePrimaryAction = async () => {
@@ -296,11 +341,17 @@ export function AddBurgerModal({
 
     try {
       const orderId = initialValues?.id ?? "";
-      const displayIngredients = ingredientAmountsToDisplayList(ingredientAmounts, ingredients);
+      const displayIngredients = withCheeseIngredient(
+        ingredientAmountsToDisplayList(ingredientAmounts, ingredients),
+        selectedCheese,
+      );
+
+      const parsedTableNumber = Number.parseInt(tableNumberInput.trim(), 10);
 
       const currentValues: BurgerFormValues = {
         id: orderId,
         trayNumber: parsedTrayNumber,
+        tableNumber: Number.isFinite(parsedTableNumber) ? parsedTableNumber : undefined,
         item: burgerType,
         ingredients: displayIngredients,
         ingredientAmounts,
@@ -351,6 +402,7 @@ export function AddBurgerModal({
                 const nextType = event.target.value;
                 setBurgerType(nextType);
                 setIngredientAmounts(createPresetIngredientAmounts(nextType));
+                setSelectedCheese(DEFAULT_CHEESE);
               }}
               className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors focus:border-zinc-500"
             >
@@ -389,30 +441,64 @@ export function AddBurgerModal({
                     </div>
                   </div>
                 ))}
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2">
+                  <span className="text-sm text-zinc-700">Cheese</span>
+                  <div
+                    className="grid w-40 grid-cols-3 gap-0.5"
+                    role="group"
+                    aria-label="Cheese type"
+                  >
+                    {CHEESE_OPTIONS.map((cheese) => (
+                      <CheeseOptionControl
+                        key={cheese}
+                        cheese={cheese}
+                        selected={selectedCheese === cheese}
+                        onToggle={toggleCheese}
+                      />
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </section>
 
-          <section>
-            <label htmlFor="tray-number" className="mb-2 block text-sm font-semibold text-zinc-800">
-              Tray #
-            </label>
-            <input
-              ref={trayInputRef}
-              id="tray-number"
-              type="text"
-              inputMode="numeric"
-              autoComplete="off"
-              value={trayNumberInput}
-              onChange={(event) => {
-                const next = event.target.value.replace(/\D/g, "");
-                scanBufferRef.current = "";
-                lastScanDigitAtRef.current = 0;
-                setTrayNumberInput(next);
-              }}
-              placeholder="Tray number"
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 outline-none transition-colors placeholder:text-zinc-400 focus:border-zinc-500"
-            />
+          <section className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="tray-number" className="mb-2 block text-sm font-semibold text-zinc-800">
+                Tray #
+              </label>
+              <input
+                ref={trayInputRef}
+                id="tray-number"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                value={trayNumberInput}
+                onChange={(event) => {
+                  const next = event.target.value.replace(/\D/g, "");
+                  scanBufferRef.current = "";
+                  lastScanDigitAtRef.current = 0;
+                  setTrayNumberInput(next);
+                }}
+                placeholder="Tray number"
+                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 outline-none transition-colors placeholder:text-zinc-400 focus:border-zinc-500"
+              />
+            </div>
+            <div>
+              <label htmlFor="table-number" className="mb-2 block text-sm font-semibold text-zinc-800">
+                Table #
+              </label>
+              <input
+                id="table-number"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                value={tableNumberInput}
+                onChange={(event) => setTableNumberInput(event.target.value.replace(/\D/g, ""))}
+                placeholder="Optional"
+                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 outline-none transition-colors placeholder:text-zinc-400 focus:border-zinc-500"
+              />
+            </div>
           </section>
         </div>
 

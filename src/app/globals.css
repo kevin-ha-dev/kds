@@ -82,8 +82,27 @@ body {
   }
 }
 
+@keyframes kds-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.kds-fade-in {
+  animation: kds-fade-in 320ms ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .kds-skeleton::before {
+    animation: none;
+  }
+
+  .kds-fade-in {
     animation: none;
   }
 

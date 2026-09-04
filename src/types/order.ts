@@ -7,6 +7,7 @@ export type OrderStatus = "pending" | "running" | "done" | "failed";
 export type Order = {
   id: string;
   trayNumber: number;
+  tableNumber?: number;
   item: string;
   status: OrderStatus;
   ingredients: string[];
@@ -18,6 +19,7 @@ export type Order = {
 export type CompletedOrder = {
   id: string;
   trayNumber: number;
+  tableNumber?: number;
   item: string;
   ingredients: string[];
   commands: CompletedOrderCommand[];
@@ -54,6 +56,7 @@ export type DeleteOrderResponse = {
 export type CreateOrderRequestBody = {
   burgerType?: string;
   trayNumber?: number;
+  tableNumber?: number;
   ingredients?: string[];
   ingredientAmounts?: Partial<Record<string, IngredientAmount>>;
 };
@@ -65,6 +68,7 @@ export type DeleteOrderRequestBody = {
 export type BurgerFormValues = {
   id: string;
   trayNumber: number;
+  tableNumber?: number;
   item: string;
   ingredients: string[];
   ingredientAmounts?: Record<string, IngredientAmount>;
@@ -73,6 +77,7 @@ export type BurgerFormValues = {
 export type UpdateOrderRequestBody = {
   orderId?: string;
   trayNumber?: number;
+  tableNumber?: number;
   burgerType?: string;
   ingredientAmounts?: Partial<Record<string, IngredientAmount>>;
 };
@@ -82,6 +87,7 @@ export type CreateBurgerPayload = {
   ingredients: string[];
   ingredientAmounts: Record<string, IngredientAmount>;
   trayNumber: number;
+  tableNumber?: number;
 };
 
 export type CreateOrderSuccessBody = {
@@ -111,6 +117,7 @@ export type DbOrder = {
   status: OrderStatus;
   burger_name: string | null;
   tray_number: number | null;
+  table_number?: number | null;
   created_at?: string;
 };
 
@@ -119,6 +126,7 @@ export type DbCompletedOrder = {
   status: "done" | "failed";
   burger_name: string | null;
   tray_number: number | null;
+  table_number?: number | null;
   updated_at: string;
 };
 

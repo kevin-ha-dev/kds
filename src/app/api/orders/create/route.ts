@@ -9,10 +9,14 @@ import type { CreateOrderRequestBody, CreateOrderSuccessBody } from "@/types/ord
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as CreateOrderRequestBody;
-    const { burgerType, trayNumber, ingredientAmounts, ingredients } = body;
+    const { burgerType, trayNumber, tableNumber, ingredientAmounts, ingredients } = body;
 
     const normalizedBurgerType = burgerType?.trim();
     const parsedTrayNumber = Number(trayNumber);
+    const parsedTableNumber = Number(tableNumber);
+    const resolvedTableNumber = Number.isFinite(parsedTableNumber)
+      ? Math.trunc(parsedTableNumber)
+      : null;
 
     if (!Number.isFinite(parsedTrayNumber)) {
       return NextResponse.json({ error: "Missing or invalid trayNumber." }, { status: 400 });
@@ -82,6 +86,15 @@ export async function POST(req: Request) {
         { error: "create_burger_order_with_amounts did not return an order id." },
         { status: 500 },
       );
+    }
+
+    const { error: tableNumberError } = await supabase
+      .from("orders")
+      .update({ table_number: resolvedTableNumber })
+      .eq("id", numericOrderId);
+
+    if (tableNumberError) {
+      return NextResponse.json({ error: tableNumberError.message }, { status: 500 });
     }
 
     const resolvedIngredients =

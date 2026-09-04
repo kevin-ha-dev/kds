@@ -1,6 +1,7 @@
 type ReceiptProps = {
   orderId: string;
   trayNumber: number;
+  tableNumber?: number;
   item: string;
   ingredients: readonly string[];
   onEdit?: (orderId: string) => void;
@@ -10,6 +11,7 @@ type ReceiptProps = {
 export function Receipt({
   orderId,
   trayNumber,
+  tableNumber,
   item,
   ingredients,
   onEdit,
@@ -20,6 +22,7 @@ export function Receipt({
       <div className="grid grid-cols-[1fr_auto] items-start gap-3">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
           Tray #{trayNumber}
+          {tableNumber != null ? ` · Table #${tableNumber}` : ""}
         </p>
       </div>
       <div className="grid grid-cols-[1fr_auto] items-center gap-3">

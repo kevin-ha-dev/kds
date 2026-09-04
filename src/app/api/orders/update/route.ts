@@ -64,8 +64,14 @@ export async function PATCH(req: Request) {
       ingredientAmounts,
     );
 
-    const orderPatch: { tray_number: number; burger_name?: string } = {
+    const parsedTable = Number(body.tableNumber);
+    const orderPatch: {
+      tray_number: number;
+      burger_name?: string;
+      table_number: number | null;
+    } = {
       tray_number: parsedTray,
+      table_number: Number.isFinite(parsedTable) ? Math.trunc(parsedTable) : null,
     };
     if (normalizedBurgerType) {
       orderPatch.burger_name = normalizedBurgerType;

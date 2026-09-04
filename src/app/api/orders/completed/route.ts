@@ -12,7 +12,7 @@ export async function POST() {
 
     const { data: orders, error: ordersError } = await supabase
       .from("orders")
-      .select("id, status, burger_name, tray_number, updated_at")
+      .select("id, status, burger_name, tray_number, table_number, updated_at")
       .in("status", ["done", "failed"])
       .order("updated_at", { ascending: false });
 
@@ -73,6 +73,10 @@ export async function POST() {
           order.tray_number != null && Number.isFinite(Number(order.tray_number))
             ? Number(order.tray_number)
             : 0,
+        tableNumber:
+          order.table_number != null && Number.isFinite(Number(order.table_number))
+            ? Number(order.table_number)
+            : undefined,
         item: order.burger_name?.trim() || "Custom Burger",
         ingredients,
         commands: commands.map((command) => ({

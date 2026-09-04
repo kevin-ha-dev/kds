@@ -2,6 +2,36 @@ import type { IngredientAmount } from "@/types/order";
 
 export const INGREDIENT_AMOUNT_OPTIONS: IngredientAmount[] = ["none", "normal", "extra"];
 
+/** Frontend-only cheese choices shown on tickets (not sent as order commands). */
+export const CHEESE_OPTIONS = ["Cheddar", "Pepper Jack", "Provolone"] as const;
+export type CheeseOption = (typeof CHEESE_OPTIONS)[number];
+export const DEFAULT_CHEESE: CheeseOption = CHEESE_OPTIONS[0];
+
+export function isCheeseOption(value: string): value is CheeseOption {
+  return (CHEESE_OPTIONS as readonly string[]).includes(value);
+}
+
+export function parseSelectedCheese(names: readonly string[]): CheeseOption | null {
+  for (const name of names) {
+    if (isCheeseOption(name)) {
+      return name;
+    }
+  }
+  return null;
+}
+
+export function stripCheeseFromIngredients(names: readonly string[]): string[] {
+  return names.filter((name) => !isCheeseOption(name));
+}
+
+export function withCheeseIngredient(
+  names: readonly string[],
+  cheese: CheeseOption | null,
+): string[] {
+  const withoutCheese = stripCheeseFromIngredients(names);
+  return cheese ? [...withoutCheese, cheese] : withoutCheese;
+}
+
 /**
  * Amount mapping:
  * | Label  | UI / raw | Dispensers | Sauces |

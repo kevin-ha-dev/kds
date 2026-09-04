@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
-import { ArrowUp, DollarSign, ShoppingBag, TriangleAlert } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { ArrowUp, ChevronDown, DollarSign, ShoppingBag, TriangleAlert } from "lucide-react";
+import { Bar, BarChart, CartesianGrid, Rectangle, XAxis, YAxis } from "recharts";
 import { Navbar, Skeleton } from "@/components";
 import {
   ChartContainer,
@@ -10,49 +10,22 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/charts/chart";
+import {
+  bucketRevenueByTimeframe,
+  filterOrdersByTimeframe,
+  formatCompletedAt,
+  ORDER_REVENUE_USD,
+  TIMEFRAME_OPTIONS,
+  type Timeframe,
+} from "@/lib/dashboard-timeframe";
 import { parseResponseJson } from "@/lib/parse-response-json";
 import { getBrowserSupabaseClient } from "@/lib/supabase/client";
 import type { CompletedOrder, CompletedOrdersResponse } from "@/types/order";
 
-const timeframeOptions = ["Today", "Week", "Month", "Year"] as const;
-type Timeframe = (typeof timeframeOptions)[number];
-
 const REVENUE_COLOR = "#e9b94f";
 const REVENUE_FILL_GRADIENT_ID = "fill-revenue";
-
-const revenueByTimeframe: Record<Timeframe, Array<{ period: string; revenue: number }>> = {
-  Today: [
-    { period: "9 AM", revenue: 420 },
-    { period: "11 AM", revenue: 980 },
-    { period: "1 PM", revenue: 1520 },
-    { period: "3 PM", revenue: 1180 },
-    { period: "5 PM", revenue: 1680 },
-    { period: "7 PM", revenue: 910 },
-  ],
-  Week: [
-    { period: "Mon", revenue: 4200 },
-    { period: "Tue", revenue: 4780 },
-    { period: "Wed", revenue: 4410 },
-    { period: "Thu", revenue: 5230 },
-    { period: "Fri", revenue: 6120 },
-    { period: "Sat", revenue: 7040 },
-    { period: "Sun", revenue: 5290 },
-  ],
-  Month: [
-    { period: "W1", revenue: 21500 },
-    { period: "W2", revenue: 23800 },
-    { period: "W3", revenue: 25200 },
-    { period: "W4", revenue: 24100 },
-  ],
-  Year: [
-    { period: "Jan", revenue: 82400 },
-    { period: "Mar", revenue: 88500 },
-    { period: "May", revenue: 93200 },
-    { period: "Jul", revenue: 101800 },
-    { period: "Sep", revenue: 98600 },
-    { period: "Nov", revenue: 108400 },
-  ],
-};
+const TIMEFRAME_TRANSITION_MS = 360;
+const CHART_SKELETON_HEIGHTS = ["38%", "58%", "44%", "72%", "51%", "64%", "41%", "55%"];
 
 const revenueChartConfig = {
   revenue: {
@@ -70,12 +43,6 @@ const formatCurrency = (value: number) =>
 
 const formatRevenueTick = (value: number) =>
   value >= 1000 ? `$${(value / 1000).toFixed(value % 1000 === 0 ? 0 : 1)}k` : `$${value}`;
-
-const formatCompletedTime = (isoDate: string) =>
-  new Date(isoDate).toLocaleTimeString([], {
-    hour: "numeric",
-    minute: "2-digit",
-  });
 
 async function loadCompletedOrdersFromApi(): Promise<CompletedOrder[]> {
   const response = await fetch("/api/orders/completed", {
@@ -117,7 +84,8 @@ const StatCard = ({ label, value, icon, isLoading, valueClassName, trend }: Stat
         <Skeleton className="mt-2 h-7 w-24" tone="strong" />
       ) : (
         <p
-          className={`mt-1 flex w-full items-center justify-start gap-1 truncate text-2xl font-bold tracking-tight ${valueClassName ?? "text-zinc-900"}`}
+          key={value}
+          className={`kds-fade-in mt-1 flex w-full items-center justify-start gap-1 truncate text-2xl tracking-tight ${valueClassName ?? "font-bold text-zinc-900"}`}
         >
           <span className="truncate">{value}</span>
           {trend === "up" ? (
@@ -126,6 +94,56 @@ const StatCard = ({ label, value, icon, isLoading, valueClassName, trend }: Stat
         </p>
       )}
     </div>
+  </div>
+);
+
+type RevenueBarShapeProps = {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  fill?: string;
+  stroke?: string;
+  strokeWidth?: number;
+};
+
+function RevenueBarShape({
+  x = 0,
+  y = 0,
+  width = 0,
+  height = 0,
+  fill,
+  stroke,
+  strokeWidth,
+}: RevenueBarShapeProps) {
+  if (height <= 0 || width <= 0) {
+    return null;
+  }
+
+  return (
+    <Rectangle
+      x={x}
+      y={y}
+      width={width}
+      height={height}
+      fill={fill}
+      stroke={stroke}
+      strokeWidth={strokeWidth}
+      radius={[6, 6, 0, 0]}
+    />
+  );
+}
+
+const ChartSkeleton = () => (
+  <div className="flex min-h-0 w-full flex-1 items-end gap-2.5 px-8 pb-8 pt-6" aria-hidden>
+    {CHART_SKELETON_HEIGHTS.map((height, index) => (
+      <div key={index} className="min-h-0 w-full flex-1" style={{ height }}>
+        <Skeleton
+          className="h-full w-full rounded-t-md rounded-b-sm"
+          tone={index % 2 === 0 ? "base" : "soft"}
+        />
+      </div>
+    ))}
   </div>
 );
 
@@ -147,7 +165,10 @@ export default function DashboardPage() {
   const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>("Today");
   const [completedOrders, setCompletedOrders] = useState<CompletedOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isTimeframeLoading, setIsTimeframeLoading] = useState(false);
   const [, setErrorBanner] = useState<string | null>(null);
+
+  const showLoading = isLoading || isTimeframeLoading;
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -219,10 +240,42 @@ export default function DashboardPage() {
     };
   }, []);
 
-  const revenueData = revenueByTimeframe[selectedTimeframe];
-  const totalRevenue = revenueData.reduce((sum, entry) => sum + entry.revenue, 0);
-  const failedOrders = completedOrders.filter((order) => order.status === "failed").length;
-  const productSales = completedOrders.length - failedOrders;
+  useEffect(() => {
+    if (!isTimeframeLoading) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setIsTimeframeLoading(false);
+    }, TIMEFRAME_TRANSITION_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [isTimeframeLoading, selectedTimeframe]);
+
+  const handleTimeframeChange = (nextTimeframe: Timeframe) => {
+    if (nextTimeframe === selectedTimeframe) {
+      return;
+    }
+
+    setSelectedTimeframe(nextTimeframe);
+    if (!isLoading) {
+      setIsTimeframeLoading(true);
+    }
+  };
+
+  const filteredOrders = useMemo(
+    () => filterOrdersByTimeframe(completedOrders, selectedTimeframe),
+    [completedOrders, selectedTimeframe],
+  );
+  const revenueData = useMemo(
+    () => bucketRevenueByTimeframe(completedOrders, selectedTimeframe),
+    [completedOrders, selectedTimeframe],
+  );
+  const failedOrders = filteredOrders.filter((order) => order.status === "failed").length;
+  const productSales = filteredOrders.length - failedOrders;
+  const totalRevenue = productSales * ORDER_REVENUE_USD;
 
   return (
     <main className="h-screen overflow-hidden bg-white px-6 pt-8 pb-0 text-zinc-900 lg:px-10">
@@ -238,48 +291,33 @@ export default function DashboardPage() {
                 label="Revenue"
                 value={formatCurrency(totalRevenue)}
                 icon={<DollarSign className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />}
-                valueClassName="text-emerald-600"
-                trend="up"
-                isLoading={isLoading}
+                valueClassName="font-semibold text-[#2fbf45]"
+                isLoading={showLoading}
               />
               <StatCard
                 label="Product Sales"
                 value={productSales.toLocaleString()}
                 icon={<ShoppingBag className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />}
-                isLoading={isLoading}
+                isLoading={showLoading}
               />
               <StatCard
                 label="Failed Orders"
                 value={failedOrders.toLocaleString()}
                 icon={<TriangleAlert className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />}
-                isLoading={isLoading}
+                valueClassName="font-semibold text-[#d96a6a]"
+                isLoading={showLoading}
               />
             </div>
 
             <section className="flex min-h-0 flex-1 flex-col rounded-xl border border-zinc-200 bg-white px-4 py-4 shadow-sm md:px-6">
-              <div className="mb-3 flex shrink-0 justify-end">
-                <div>
-                  <label htmlFor="dashboard-timeframe" className="sr-only">
-                    Select dashboard timeframe
-                  </label>
-                  <select
-                    id="dashboard-timeframe"
-                    value={selectedTimeframe}
-                    onChange={(event) =>
-                      setSelectedTimeframe(event.target.value as (typeof timeframeOptions)[number])
-                    }
-                    className="h-9 min-w-36 rounded-md border border-zinc-300 bg-white px-3 text-sm font-medium text-zinc-700 shadow-sm outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
-                  >
-                    {timeframeOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <ChartContainer config={revenueChartConfig} className="min-h-0 w-full flex-1">
+              {showLoading ? (
+                <ChartSkeleton />
+              ) : (
+                <ChartContainer
+                  key={selectedTimeframe}
+                  config={revenueChartConfig}
+                  className="kds-fade-in min-h-0 w-full flex-1"
+                >
                 <BarChart
                   accessibilityLayer
                   data={revenueData}
@@ -292,9 +330,15 @@ export default function DashboardPage() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid vertical={false} />
-                  <XAxis dataKey="period" tickLine={false} tickMargin={10} axisLine={false} />
+                  <XAxis
+                    dataKey="period"
+                    tickLine={false}
+                    tickMargin={10}
+                    axisLine={false}
+                    interval={0}
+                  />
                   <YAxis
-                    domain={[0, "auto"]}
+                    domain={[0, (dataMax: number) => Math.max(dataMax, ORDER_REVENUE_USD)]}
                     tickLine={false}
                     axisLine={false}
                     width={52}
@@ -312,19 +356,44 @@ export default function DashboardPage() {
                     fill={`url(#${REVENUE_FILL_GRADIENT_ID})`}
                     stroke="var(--color-revenue)"
                     strokeWidth={1}
-                    radius={6}
+                    isAnimationActive={false}
+                    shape={RevenueBarShape}
+                    activeBar={false}
                   />
                 </BarChart>
-              </ChartContainer>
+                </ChartContainer>
+              )}
             </section>
           </div>
 
           <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
             <div className="flex min-h-0 flex-1 flex-col px-4 py-4 md:px-5">
-              <div className="mb-4 flex shrink-0 items-baseline border-b border-zinc-200 pb-3">
+              <div className="mb-4 flex shrink-0 items-center justify-between gap-3 border-b border-zinc-200 pb-3">
                 <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-900">
                   Completed Orders
                 </h2>
+                <div className="relative">
+                  <label htmlFor="dashboard-timeframe" className="sr-only">
+                    Select dashboard timeframe
+                  </label>
+                  <select
+                    id="dashboard-timeframe"
+                    value={selectedTimeframe}
+                    onChange={(event) => handleTimeframeChange(event.target.value as Timeframe)}
+                    className="h-8 min-w-28 appearance-none rounded-md border border-zinc-200 bg-zinc-50 py-0 pr-7 pl-2.5 text-sm font-medium text-zinc-700 outline-none transition hover:border-zinc-300 hover:bg-white focus:border-zinc-400 focus:bg-white focus:ring-2 focus:ring-zinc-200"
+                  >
+                    {TIMEFRAME_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    className="pointer-events-none absolute top-1/2 right-2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400"
+                    strokeWidth={2}
+                    aria-hidden
+                  />
+                </div>
               </div>
 
               <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -332,7 +401,7 @@ export default function DashboardPage() {
                   <colgroup>
                     <col />
                     <col className="w-13" />
-                    <col className="w-19" />
+                    <col className={selectedTimeframe === "Today" ? "w-19" : "w-28"} />
                   </colgroup>
                   <thead className="sticky top-0 bg-white">
                     <tr className="border-b border-zinc-200 text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
@@ -342,25 +411,28 @@ export default function DashboardPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {isLoading ? (
+                    {showLoading ? (
                       Array.from({ length: 7 }, (_, index) => <CompletedRowSkeleton key={index} />)
-                    ) : completedOrders.length === 0 ? (
+                    ) : filteredOrders.length === 0 ? (
                       <tr>
-                        <td colSpan={3} className="py-10 text-center text-sm text-zinc-400">
-                          No completed orders yet.
+                        <td colSpan={3} className="kds-fade-in py-10 text-center text-sm text-zinc-400">
+                          No completed orders in this period.
                         </td>
                       </tr>
                     ) : (
-                      completedOrders.map((order) => (
-                        <tr key={order.id} className="border-b border-zinc-100 last:border-b-0">
+                      filteredOrders.map((order) => (
+                        <tr
+                          key={order.id}
+                          className="kds-fade-in border-b border-zinc-100 last:border-b-0"
+                        >
                           <td className="overflow-hidden py-3 pr-4 font-medium tracking-tight text-ellipsis whitespace-nowrap text-zinc-900">
                             {order.item}
                           </td>
                           <td className="py-3 pr-4 text-left tabular-nums text-zinc-700">
-                            {order.trayNumber}
+                            {order.tableNumber ?? "N/A"}
                           </td>
                           <td className="py-3 whitespace-nowrap text-right tabular-nums text-zinc-500">
-                            {formatCompletedTime(order.completedAt)}
+                            {formatCompletedAt(order.completedAt, selectedTimeframe)}
                           </td>
                         </tr>
                       ))
