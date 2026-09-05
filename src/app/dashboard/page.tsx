@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowUp, ChevronDown, DollarSign, ShoppingBag, TriangleAlert } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, Rectangle, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Rectangle, XAxis, YAxis, type BarShapeProps } from "recharts";
 import { Navbar, Skeleton } from "@/components";
 import {
   ChartContainer,
@@ -97,16 +97,6 @@ const StatCard = ({ label, value, icon, isLoading, valueClassName, trend }: Stat
   </div>
 );
 
-type RevenueBarShapeProps = {
-  x?: number;
-  y?: number;
-  width?: number;
-  height?: number;
-  fill?: string;
-  stroke?: string;
-  strokeWidth?: number;
-};
-
 function RevenueBarShape({
   x = 0,
   y = 0,
@@ -115,7 +105,7 @@ function RevenueBarShape({
   fill,
   stroke,
   strokeWidth,
-}: RevenueBarShapeProps) {
+}: BarShapeProps) {
   if (height <= 0 || width <= 0) {
     return null;
   }
