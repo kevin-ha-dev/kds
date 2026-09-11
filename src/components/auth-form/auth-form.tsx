@@ -1,9 +1,15 @@
 "use client";
 
 import { Eye, EyeOff } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
+import {
+  consumeUnauthorizedLogin,
+  getAuthorizedUser,
+  hasUnauthorizedLogin,
+  UNAUTHORIZED_LOGIN_MESSAGE,
+} from "@/lib/auth";
 import { getBrowserSupabaseClient } from "@/lib/supabase/client";
 
 type AuthMode = "login" | "signup";
@@ -33,15 +39,71 @@ function GoogleIcon() {
 
 export function AuthForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() =>
+    hasUnauthorizedLogin(searchParams) ? UNAUTHORIZED_LOGIN_MESSAGE : null,
+  );
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    if (consumeUnauthorizedLogin(searchParams)) {
+      setError(UNAUTHORIZED_LOGIN_MESSAGE);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const { client } = getBrowserSupabaseClient();
+    if (!client) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const redirectIfAuthorized = async () => {
+      const authorizedUser = await getAuthorizedUser();
+      if (cancelled) {
+        return;
+      }
+
+      if (authorizedUser) {
+        router.replace("/orders");
+        return;
+      }
+
+      const {
+        data: { session },
+      } = await client.auth.getSession();
+
+      if (session) {
+        await client.auth.signOut();
+        if (!cancelled) {
+          setError(UNAUTHORIZED_LOGIN_MESSAGE);
+        }
+      }
+    };
+
+    const {
+      data: { subscription },
+    } = client.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
+        void redirectIfAuthorized();
+      }
+    });
+
+    void redirectIfAuthorized();
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, [router]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -72,19 +134,23 @@ export function AuthForm() {
         setLoading(false);
         return;
       }
+    } else {
+      const { error: signUpError } = await client.auth.signUp({
+        email,
+        password,
+      });
 
-      router.push("/orders");
-      router.refresh();
-      return;
+      if (signUpError) {
+        setError(signUpError.message);
+        setLoading(false);
+        return;
+      }
     }
 
-    const { error: signUpError } = await client.auth.signUp({
-      email,
-      password,
-    });
-
-    if (signUpError) {
-      setError(signUpError.message);
+    const authorizedUser = await getAuthorizedUser();
+    if (!authorizedUser) {
+      await client.auth.signOut();
+      setError(UNAUTHORIZED_LOGIN_MESSAGE);
       setLoading(false);
       return;
     }
@@ -108,6 +174,9 @@ export function AuthForm() {
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/orders`,
+        queryParams: {
+          prompt: "select_account",
+        },
       },
     });
 

@@ -1,5 +1,6 @@
 export { Navbar } from "./navbar";
 export { AuthForm } from "./auth-form";
+export { RequireAuthorizedUser } from "./require-authorized-user";
 export { Receipt } from "./receipt";
 export { AddBurgerModal } from "./add-burger-modal";
 export { ConfirmDeleteModal } from "./confirm-delete-modal";

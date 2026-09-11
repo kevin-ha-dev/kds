@@ -1,5 +1,6 @@
 "use client";
 
+import type { User } from "@supabase/supabase-js";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -13,10 +14,31 @@ const navItems = [
   { label: "Controls", href: "/controls" },
 ] as const;
 
+function getGoogleAvatarUrl(user: User | null) {
+  if (!user) {
+    return null;
+  }
+
+  const fromMetadata = user.user_metadata?.avatar_url ?? user.user_metadata?.picture;
+  if (typeof fromMetadata === "string" && fromMetadata.length > 0) {
+    return fromMetadata;
+  }
+
+  const googleIdentity = user.identities?.find((identity) => identity.provider === "google");
+  const fromIdentity =
+    googleIdentity?.identity_data?.avatar_url ?? googleIdentity?.identity_data?.picture;
+  if (typeof fromIdentity === "string" && fromIdentity.length > 0) {
+    return fromIdentity;
+  }
+
+  return null;
+}
+
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   const handleSignOut = () => {
@@ -27,6 +49,31 @@ export function Navbar() {
     }
     router.push("/login");
   };
+
+  useEffect(() => {
+    const { client } = getBrowserSupabaseClient();
+    if (!client) {
+      return;
+    }
+
+    const applyAvatar = (user: User | null) => {
+      setAvatarUrl(getGoogleAvatarUrl(user));
+    };
+
+    void client.auth.getSession().then(({ data }) => {
+      applyAvatar(data.session?.user ?? null);
+    });
+
+    const {
+      data: { subscription },
+    } = client.auth.onAuthStateChange((_event, session) => {
+      applyAvatar(session?.user ?? null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     if (!isProfileMenuOpen) {
@@ -98,9 +145,19 @@ export function Navbar() {
               aria-haspopup="menu"
               aria-expanded={isProfileMenuOpen}
               onClick={() => setIsProfileMenuOpen((open) => !open)}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-zinc-100 text-sm font-semibold text-zinc-600 transition-colors hover:bg-zinc-200"
+              className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-zinc-200 bg-zinc-100 text-sm font-semibold text-zinc-600 transition-colors hover:bg-zinc-200"
             >
-              U
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  referrerPolicy="no-referrer"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                "U"
+              )}
             </button>
 
             {isProfileMenuOpen ? (
