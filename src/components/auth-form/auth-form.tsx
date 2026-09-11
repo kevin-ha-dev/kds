@@ -8,6 +8,8 @@ import {
   consumeUnauthorizedLogin,
   getAuthorizedUser,
   hasUnauthorizedLogin,
+  isOAuthReturn,
+  markAuthorized,
   resolveUsernameToEmail,
   UNAUTHORIZED_LOGIN_MESSAGE,
 } from "@/lib/auth";
@@ -51,7 +53,9 @@ export function AuthForm() {
     hasUnauthorizedLogin(searchParams) ? UNAUTHORIZED_LOGIN_MESSAGE : null,
   );
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(
+    () => searchParams.has("code") || searchParams.has("error_description"),
+  );
 
   useEffect(() => {
     if (consumeUnauthorizedLogin(searchParams)) {
@@ -66,14 +70,35 @@ export function AuthForm() {
     }
 
     let cancelled = false;
+    const waitingForOAuth = isOAuthReturn();
+    const oauthError = searchParams.get("error");
+    const oauthErrorDescription = searchParams.get("error_description");
 
-    const redirectIfAuthorized = async () => {
+    if (waitingForOAuth) {
+      setGoogleLoading(true);
+    }
+
+    if (oauthError || oauthErrorDescription) {
+      const unauthorized =
+        oauthError === "unauthorized" ||
+        searchParams.get("reason") === "unauthorized" ||
+        /not authorized/i.test(`${oauthError} ${oauthErrorDescription ?? ""}`);
+      setError(unauthorized ? UNAUTHORIZED_LOGIN_MESSAGE : oauthErrorDescription || oauthError);
+      setGoogleLoading(false);
+      if (unauthorized) {
+        void client.auth.signOut();
+      }
+      return;
+    }
+
+    const redirectIfAuthorized = async (allowMissingSession: boolean) => {
       const authorizedUser = await getAuthorizedUser();
       if (cancelled) {
         return;
       }
 
       if (authorizedUser) {
+        markAuthorized();
         router.replace("/orders");
         return;
       }
@@ -86,7 +111,15 @@ export function AuthForm() {
         await client.auth.signOut();
         if (!cancelled) {
           setError(UNAUTHORIZED_LOGIN_MESSAGE);
+          setGoogleLoading(false);
+          setLoading(false);
+          router.replace("/login?reason=unauthorized");
         }
+        return;
+      }
+
+      if (!allowMissingSession && !cancelled) {
+        setGoogleLoading(false);
       }
     };
 
@@ -94,17 +127,31 @@ export function AuthForm() {
       data: { subscription },
     } = client.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
-        void redirectIfAuthorized();
+        void redirectIfAuthorized(waitingForOAuth);
       }
     });
 
-    void redirectIfAuthorized();
+    void redirectIfAuthorized(waitingForOAuth);
+
+    const timeoutId = waitingForOAuth
+      ? window.setTimeout(() => {
+          void client.auth.signOut();
+          if (!cancelled) {
+            setError(UNAUTHORIZED_LOGIN_MESSAGE);
+            setGoogleLoading(false);
+            router.replace("/login?reason=unauthorized");
+          }
+        }, 8000)
+      : undefined;
 
     return () => {
       cancelled = true;
       subscription.unsubscribe();
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId);
+      }
     };
-  }, [router]);
+  }, [router, searchParams]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -163,6 +210,7 @@ export function AuthForm() {
       return;
     }
 
+    markAuthorized();
     router.push("/orders");
     router.refresh();
   }
@@ -181,7 +229,7 @@ export function AuthForm() {
     const { error: oauthError } = await client.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/orders`,
+        redirectTo: `${window.location.origin}/login`,
         queryParams: {
           prompt: "select_account",
         },

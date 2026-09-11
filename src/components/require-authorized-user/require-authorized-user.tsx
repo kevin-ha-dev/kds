@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useState, type ReactNode } from "react";
 
-import { getAuthorizedUser, redirectToLogin } from "@/lib/auth";
+import {
+  clearAuthorized,
+  getAuthorizedUser,
+  hasAuthorizedFlag,
+  markAuthorized,
+  redirectToLogin,
+} from "@/lib/auth";
 import { getBrowserSupabaseClient } from "@/lib/supabase/client";
 
 type RequireAuthorizedUserProps = {
@@ -11,6 +17,12 @@ type RequireAuthorizedUserProps = {
 
 export function RequireAuthorizedUser({ children }: RequireAuthorizedUserProps) {
   const [isAuthorized, setIsAuthorized] = useState(false);
+
+  useLayoutEffect(() => {
+    if (hasAuthorizedFlag()) {
+      setIsAuthorized(true);
+    }
+  }, []);
 
   useEffect(() => {
     const { client } = getBrowserSupabaseClient();
@@ -28,6 +40,7 @@ export function RequireAuthorizedUser({ children }: RequireAuthorizedUserProps) 
       }
 
       settled = true;
+      clearAuthorized();
       await client.auth.signOut();
       redirectToLogin(unauthorized);
     };
@@ -38,6 +51,7 @@ export function RequireAuthorizedUser({ children }: RequireAuthorizedUserProps) 
       }
 
       settled = true;
+      markAuthorized();
       setIsAuthorized(true);
     };
 

@@ -42,6 +42,7 @@ export function consumeUnauthorizedLogin(searchParams?: { get: (name: string) =>
 }
 
 export function redirectToLogin(unauthorized = false) {
+  clearAuthorized();
   if (unauthorized) {
     markUnauthorizedLogin();
     window.location.replace(UNAUTHORIZED_LOGIN_PATH);
@@ -49,6 +50,41 @@ export function redirectToLogin(unauthorized = false) {
   }
 
   window.location.replace("/login");
+}
+
+const AUTHORIZED_FLAG = "kds-authorized";
+
+export function markAuthorized() {
+  try {
+    sessionStorage.setItem(AUTHORIZED_FLAG, "1");
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+export function clearAuthorized() {
+  try {
+    sessionStorage.removeItem(AUTHORIZED_FLAG);
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+export function hasAuthorizedFlag() {
+  try {
+    return sessionStorage.getItem(AUTHORIZED_FLAG) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function isOAuthReturn() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  return params.has("code") || window.location.hash.includes("access_token");
 }
 
 export const STATION_USERNAME = "burgerbots";

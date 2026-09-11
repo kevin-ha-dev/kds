@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { getBrowserSupabaseClient } from "@/lib/supabase/client";
+import { clearAuthorized } from "@/lib/auth";
 
 const navItems = [
   { label: "Orders", href: "/orders" },
@@ -43,6 +44,7 @@ export function Navbar() {
 
   const handleSignOut = () => {
     setIsProfileMenuOpen(false);
+    clearAuthorized();
     const { client } = getBrowserSupabaseClient();
     if (client) {
       void client.auth.signOut();
