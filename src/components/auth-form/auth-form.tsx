@@ -8,6 +8,7 @@ import {
   consumeUnauthorizedLogin,
   getAuthorizedUser,
   hasUnauthorizedLogin,
+  resolveUsernameToEmail,
   UNAUTHORIZED_LOGIN_MESSAGE,
 } from "@/lib/auth";
 import { getBrowserSupabaseClient } from "@/lib/supabase/client";
@@ -41,7 +42,7 @@ export function AuthForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<AuthMode>("login");
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -124,6 +125,13 @@ export function AuthForm() {
     }
 
     if (mode === "login") {
+      const email = resolveUsernameToEmail(identifier);
+      if (!email) {
+        setError("Invalid login credentials.");
+        setLoading(false);
+        return;
+      }
+
       const { error: signInError } = await client.auth.signInWithPassword({
         email,
         password,
@@ -136,7 +144,7 @@ export function AuthForm() {
       }
     } else {
       const { error: signUpError } = await client.auth.signUp({
-        email,
+        email: identifier,
         password,
       });
 
@@ -206,16 +214,16 @@ export function AuthForm() {
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="email" className="text-sm font-medium text-zinc-900">
-              Email
+            <label htmlFor={mode === "login" ? "username" : "email"} className="text-sm font-medium text-zinc-900">
+              {mode === "login" ? "Username" : "Email"}
             </label>
             <input
-              id="email"
-              type="email"
-              autoComplete="email"
+              id={mode === "login" ? "username" : "email"}
+              type={mode === "login" ? "text" : "email"}
+              autoComplete={mode === "login" ? "username" : "email"}
               required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              value={identifier}
+              onChange={(event) => setIdentifier(event.target.value)}
               className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
             />
           </div>

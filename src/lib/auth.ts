@@ -51,6 +51,18 @@ export function redirectToLogin(unauthorized = false) {
   window.location.replace("/login");
 }
 
+export const STATION_USERNAME = "burgerbots";
+export const STATION_EMAIL = "burgerbots@burgerbots.com";
+
+export function resolveUsernameToEmail(username: string) {
+  const trimmed = username.trim().toLowerCase();
+  if (trimmed === STATION_USERNAME) {
+    return STATION_EMAIL;
+  }
+
+  return null;
+}
+
 export type AuthorizedUser = {
   user: User;
   role: string;
