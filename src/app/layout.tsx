@@ -36,8 +36,9 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
+  width: 1280,
+  // 0 is omitted from the tag, so phones scale this desktop layout to fit.
+  initialScale: 0,
   viewportFit: "cover",
   themeColor: "#ffffff",
 };
