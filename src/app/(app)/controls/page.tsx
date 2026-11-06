@@ -256,10 +256,10 @@ export default function ControlsPage() {
           <Navbar />
         </div>
 
-        <section className="mt-6 flex min-h-0 flex-1 flex-col gap-5 overflow-hidden pb-6 lg:grid lg:grid-cols-2 lg:grid-rows-[auto_minmax(0,1fr)]">
-          <div className="order-3 shrink-0 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm lg:order-1 lg:col-span-2">
-            <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md bg-linear-to-br from-zinc-800 to-zinc-600 text-white shadow-inner">
+        <section className="mt-6 flex min-h-0 flex-1 flex-col gap-4 overflow-hidden pb-6 lg:grid lg:grid-cols-[minmax(17rem,22rem)_minmax(0,1fr)] lg:grid-rows-[auto_minmax(0,1fr)] lg:gap-5">
+          <div className="order-3 shrink-0 rounded-md border border-zinc-200 bg-white p-3.5 shadow-sm lg:order-1">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-linear-to-br from-zinc-800 to-zinc-600 text-white shadow-inner">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                   <path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z" />
                 </svg>
@@ -298,7 +298,7 @@ export default function ControlsPage() {
                 aria-label={isMusicOn ? "Pause music" : "Play music"}
                 disabled={!isControlStateLoaded}
                 onClick={toggleMusic}
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-sm transition-transform hover:scale-105 active:scale-95 disabled:opacity-50"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground shadow-sm transition-transform hover:scale-105 active:scale-95 disabled:opacity-50"
               >
                 {isMusicOn ? (
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -319,7 +319,7 @@ export default function ControlsPage() {
               </button>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center gap-2">
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
               {songs.map((song) => {
                 const isSelected = isControlStateLoaded && selectedSong.id === song.id;
                 return (
@@ -329,7 +329,7 @@ export default function ControlsPage() {
                     aria-pressed={isSelected}
                     disabled={!isControlStateLoaded}
                     onClick={() => selectSong(song.id)}
-                    className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${
+                    className={`rounded-md border px-2.5 py-1 text-sm font-medium transition-colors disabled:opacity-50 ${
                       isSelected
                         ? "border-zinc-400 bg-zinc-100 text-zinc-900"
                         : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50"
@@ -341,7 +341,7 @@ export default function ControlsPage() {
               })}
             </div>
 
-            <div className="mt-4 flex items-center gap-3 border-t border-dotted border-zinc-200 pt-4">
+            <div className="mt-3 flex items-center gap-2.5 border-t border-dotted border-zinc-200 pt-3">
               <button
                 type="button"
                 aria-label={isMuted ? "Unmute" : "Mute"}
@@ -378,7 +378,7 @@ export default function ControlsPage() {
             </div>
           </div>
 
-          <div className="order-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white p-5 shadow-sm lg:order-2 lg:flex-none">
+          <div className="order-2 flex shrink-0 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white p-4 shadow-sm lg:order-2 lg:self-start lg:p-5">
             <div className="shrink-0">
               <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
                 Emotes
@@ -388,7 +388,7 @@ export default function ControlsPage() {
               </p>
             </div>
 
-            <div className="mt-4 grid min-h-0 flex-1 auto-rows-fr grid-cols-2 gap-3">
+            <div className="mt-4 grid grid-cols-2 gap-3">
               {emotes.map((emote) => {
                 const isPending = pendingEmoteId === emote.id;
                 return (
@@ -413,7 +413,7 @@ export default function ControlsPage() {
             </div>
           </div>
 
-          <LiveCameraFeed className="order-1 min-h-0 flex-1 lg:order-3 lg:flex-none" />
+          <LiveCameraFeed className="order-1 min-h-0 flex-1 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:flex-none" />
         </section>
       </div>
     </main>

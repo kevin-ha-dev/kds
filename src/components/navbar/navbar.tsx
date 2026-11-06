@@ -137,7 +137,7 @@ export function Navbar() {
                     href={item.href}
                     className={`flex flex-col items-center justify-center gap-0.5 whitespace-nowrap rounded-full px-1 py-1.5 text-[11px] font-semibold leading-none transition-colors md:flex-row md:rounded-none md:border-b-2 md:bg-transparent md:px-0 md:py-0 md:pb-1 md:text-sm md:leading-normal ${
                       isActive
-                        ? "bg-zinc-900 text-white md:border-black md:text-black"
+                        ? "bg-zinc-200 text-zinc-500 md:border-zinc-400 md:text-zinc-500"
                         : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 md:border-transparent md:text-zinc-700 md:hover:bg-transparent md:hover:text-black"
                     }`}
                   >
@@ -155,7 +155,7 @@ export function Navbar() {
                 onClick={() => setIsProfileMenuOpen((open) => !open)}
                 className={`flex w-full flex-col items-center justify-center gap-0.5 whitespace-nowrap rounded-full px-1 py-1.5 text-[11px] font-semibold leading-none transition-colors ${
                   isProfileMenuOpen
-                    ? "bg-zinc-900 text-white"
+                    ? "bg-zinc-200 text-zinc-500"
                     : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
                 }`}
               >

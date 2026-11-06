@@ -440,7 +440,7 @@ export default function OrdersPage() {
       {!isLoading && orders.length === 0 && (
         <div
           aria-hidden
-          className="pointer-events-none fixed right-16 bottom-24 z-30 flex flex-col items-start lg:right-20"
+          className="pointer-events-none fixed right-14 bottom-[calc(10rem+env(safe-area-inset-bottom))] z-30 flex flex-col items-start md:right-16 md:bottom-24 lg:right-20"
         >
           <span className="mb-1 -translate-x-24 translate-y-6 font-mono text-sm font-medium tracking-wide text-accent">
             Start here
@@ -476,7 +476,7 @@ export default function OrdersPage() {
           setSelectedOrderId(null);
           setIsAddBurgerModalOpen(true);
         }}
-        className="fixed right-6 bottom-6 z-40 inline-flex items-center gap-2 rounded-full bg-accent px-4 py-3 text-sm font-semibold tracking-wide text-accent-foreground shadow-lg transition-colors hover:brightness-95 lg:right-10"
+        className="fixed right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-30 inline-flex items-center gap-2 rounded-full bg-accent px-4 py-3 text-sm font-semibold tracking-wide text-accent-foreground shadow-lg transition-colors hover:brightness-95 md:right-6 md:bottom-6 md:z-40 lg:right-10"
       >
         <ChefHat className="h-4 w-4" strokeWidth={1.75} aria-hidden />
         Build Burger
