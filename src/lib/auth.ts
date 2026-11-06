@@ -1,4 +1,4 @@
-import type { User } from "@supabase/supabase-js";
+import type { AuthError, SupabaseClient, User } from "@supabase/supabase-js";
 
 import { getBrowserSupabaseClient } from "@/lib/supabase/client";
 
@@ -56,7 +56,8 @@ const AUTHORIZED_FLAG = "kds-authorized";
 
 export function markAuthorized() {
   try {
-    sessionStorage.setItem(AUTHORIZED_FLAG, "1");
+    localStorage.setItem(AUTHORIZED_FLAG, "1");
+    sessionStorage.removeItem(AUTHORIZED_FLAG);
   } catch {
     // Ignore storage failures.
   }
@@ -64,6 +65,7 @@ export function markAuthorized() {
 
 export function clearAuthorized() {
   try {
+    localStorage.removeItem(AUTHORIZED_FLAG);
     sessionStorage.removeItem(AUTHORIZED_FLAG);
   } catch {
     // Ignore storage failures.
@@ -72,7 +74,17 @@ export function clearAuthorized() {
 
 export function hasAuthorizedFlag() {
   try {
-    return sessionStorage.getItem(AUTHORIZED_FLAG) === "1";
+    if (localStorage.getItem(AUTHORIZED_FLAG) === "1") {
+      return true;
+    }
+
+    if (sessionStorage.getItem(AUTHORIZED_FLAG) === "1") {
+      localStorage.setItem(AUTHORIZED_FLAG, "1");
+      sessionStorage.removeItem(AUTHORIZED_FLAG);
+      return true;
+    }
+
+    return false;
   } catch {
     return false;
   }
@@ -104,19 +116,47 @@ export type AuthorizedUser = {
   role: string;
 };
 
-export async function getAuthorizedUser(): Promise<AuthorizedUser | null> {
-  const { client: supabase } = getBrowserSupabaseClient();
-  if (!supabase) {
-    return null;
+export type AuthorizationResult =
+  | { status: "authorized"; user: User; role: string }
+  | { status: "unauthenticated" }
+  | { status: "unauthorized" }
+  | { status: "error" };
+
+function isSessionMissing(error: AuthError | null) {
+  if (!error) {
+    return false;
   }
 
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
+  return error.name === "AuthSessionMissingError" || /session missing/i.test(error.message);
+}
 
-  if (error || !user || !user.email) {
-    return null;
+type UserLookup =
+  | { status: "user"; user: User }
+  | { status: "unauthenticated" }
+  | { status: "error" };
+
+async function lookupUser(supabase: SupabaseClient): Promise<UserLookup> {
+  let userResult: Awaited<ReturnType<SupabaseClient["auth"]["getUser"]>>;
+  try {
+    userResult = await supabase.auth.getUser();
+  } catch {
+    return { status: "error" };
+  }
+
+  if (userResult.error || !userResult.data.user) {
+    if (isSessionMissing(userResult.error)) {
+      return { status: "unauthenticated" };
+    }
+
+    return { status: "error" };
+  }
+
+  return { status: "user", user: userResult.data.user };
+}
+
+async function authorizeUser(supabase: SupabaseClient, user: User): Promise<AuthorizationResult> {
+  if (!user.email) {
+    return { status: "unauthorized" };
   }
 
   const { data: authorizedUser, error: authError } = await supabase
@@ -125,12 +165,66 @@ export async function getAuthorizedUser(): Promise<AuthorizedUser | null> {
     .ilike("email", user.email)
     .maybeSingle();
 
-  if (authError || !authorizedUser) {
-    return null;
+  if (authError) {
+    return { status: "error" };
+  }
+
+  if (!authorizedUser) {
+    return { status: "unauthorized" };
   }
 
   return {
+    status: "authorized",
     user,
     role: authorizedUser.role,
   };
+}
+
+async function refreshStoredSession(
+  supabase: SupabaseClient,
+): Promise<Exclude<UserLookup, { status: "user" }> | null> {
+  try {
+    const { data, error } = await supabase.auth.refreshSession();
+    if (!error && data.session) {
+      return null;
+    }
+  } catch {
+    return { status: "error" };
+  }
+
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      return { status: "unauthenticated" };
+    }
+  } catch {
+    return { status: "error" };
+  }
+
+  return { status: "error" };
+}
+
+export async function getAuthorizedUser(): Promise<AuthorizationResult> {
+  const { client: supabase } = getBrowserSupabaseClient();
+  if (!supabase) {
+    return { status: "error" };
+  }
+
+  let lookup = await lookupUser(supabase);
+  if (lookup.status === "error") {
+    const refreshed = await refreshStoredSession(supabase);
+    if (refreshed) {
+      return refreshed;
+    }
+
+    lookup = await lookupUser(supabase);
+  }
+
+  if (lookup.status !== "user") {
+    return lookup;
+  }
+
+  return authorizeUser(supabase, lookup.user);
 }

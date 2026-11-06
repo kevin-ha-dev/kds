@@ -41,7 +41,9 @@ export function RequireAuthorizedUser({ children }: RequireAuthorizedUserProps) 
 
       settled = true;
       clearAuthorized();
-      await client.auth.signOut();
+      if (unauthorized) {
+        await client.auth.signOut();
+      }
       redirectToLogin(unauthorized);
     };
 
@@ -56,27 +58,34 @@ export function RequireAuthorizedUser({ children }: RequireAuthorizedUserProps) 
     };
 
     const verify = async (allowMissingSession: boolean) => {
-      const authorizedUser = await getAuthorizedUser();
-      if (cancelled) {
+      if (cancelled || settled) {
         return;
       }
 
-      if (authorizedUser) {
+      const result = await getAuthorizedUser();
+      if (cancelled || settled) {
+        return;
+      }
+
+      if (result.status === "authorized") {
         accept();
         return;
       }
 
-      const {
-        data: { session },
-      } = await client.auth.getSession();
+      if (result.status === "error") {
+        if (hasAuthorizedFlag()) {
+          setIsAuthorized(true);
+        }
+        return;
+      }
 
-      if (session) {
+      if (result.status === "unauthorized") {
         await reject(true);
         return;
       }
 
       if (!allowMissingSession) {
-        await reject();
+        await reject(false);
       }
     };
 
@@ -97,9 +106,26 @@ export function RequireAuthorizedUser({ children }: RequireAuthorizedUserProps) 
     const {
       data: { subscription },
     } = client.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
-        void verify(waitingForOAuth);
-      }
+      window.setTimeout(() => {
+        if (cancelled) {
+          return;
+        }
+
+        if (event === "SIGNED_OUT") {
+          if (waitingForOAuth || settled) {
+            return;
+          }
+
+          settled = true;
+          clearAuthorized();
+          redirectToLogin(false);
+          return;
+        }
+
+        if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
+          void verify(waitingForOAuth);
+        }
+      }, 0);
     });
 
     const timeoutId = waitingForOAuth

@@ -250,9 +250,9 @@ export default function ControlsPage() {
   }, []);
 
   return (
-    <main className="h-screen overflow-hidden bg-white px-6 pt-8 pb-0 text-zinc-900 lg:px-10">
+    <main className="h-dvh overflow-hidden bg-white px-6 pt-[max(2rem,env(safe-area-inset-top))] pb-[calc(5.5rem+env(safe-area-inset-bottom))] text-zinc-900 md:pt-8 md:pb-0 lg:px-10">
       <div className="flex h-full w-full min-h-0 flex-col">
-        <div className="mb-4">
+        <div className="md:mb-4">
           <Navbar />
         </div>
 

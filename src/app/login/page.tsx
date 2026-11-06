@@ -15,7 +15,7 @@ function LoginFallback() {
 
 export default function LoginPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-white px-6 text-zinc-900">
+    <main className="flex min-h-dvh items-center justify-center bg-white px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] text-zinc-900">
       <Suspense fallback={<LoginFallback />}>
         <AuthForm />
       </Suspense>

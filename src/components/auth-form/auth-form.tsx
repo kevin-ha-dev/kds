@@ -92,22 +92,18 @@ export function AuthForm() {
     }
 
     const redirectIfAuthorized = async (allowMissingSession: boolean) => {
-      const authorizedUser = await getAuthorizedUser();
+      const result = await getAuthorizedUser();
       if (cancelled) {
         return;
       }
 
-      if (authorizedUser) {
+      if (result.status === "authorized") {
         markAuthorized();
         router.replace("/orders");
         return;
       }
 
-      const {
-        data: { session },
-      } = await client.auth.getSession();
-
-      if (session) {
+      if (result.status === "unauthorized") {
         await client.auth.signOut();
         if (!cancelled) {
           setError(UNAUTHORIZED_LOGIN_MESSAGE);
@@ -120,15 +116,22 @@ export function AuthForm() {
 
       if (!allowMissingSession && !cancelled) {
         setGoogleLoading(false);
+        setLoading(false);
       }
     };
 
     const {
       data: { subscription },
     } = client.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
-        void redirectIfAuthorized(waitingForOAuth);
-      }
+      window.setTimeout(() => {
+        if (cancelled) {
+          return;
+        }
+
+        if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
+          void redirectIfAuthorized(waitingForOAuth);
+        }
+      }, 0);
     });
 
     void redirectIfAuthorized(waitingForOAuth);
@@ -202,8 +205,14 @@ export function AuthForm() {
       }
     }
 
-    const authorizedUser = await getAuthorizedUser();
-    if (!authorizedUser) {
+    const result = await getAuthorizedUser();
+    if (result.status === "error" || result.status === "unauthenticated") {
+      setError("Could not verify your account. Try again.");
+      setLoading(false);
+      return;
+    }
+
+    if (result.status === "unauthorized") {
       await client.auth.signOut();
       setError(UNAUTHORIZED_LOGIN_MESSAGE);
       setLoading(false);
